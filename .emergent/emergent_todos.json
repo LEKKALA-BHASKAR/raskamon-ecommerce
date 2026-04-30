@@ -1,18 +1,18 @@
 [
   {
-    "content": "Run comprehensive E2E testing via testing_agent_v3 (Browse, Cart, Checkout COD, Orders, Admin flows)",
-    "status": "in_progress"
+    "content": "Add data-testid attributes for search input and mobile menu for better testability",
+    "status": "pending"
   },
   {
-    "content": "Fix all bugs reported by testing agent (prioritize P0 > P1 > P2)",
+    "content": "Fix API root endpoint to return proper API info",
     "status": "pending"
   },
   {
     "content": "Validate UI/UX against design_guidelines.md (colors, typography, dark mode, animations, responsive)",
-    "status": "pending"
+    "status": "completed"
   },
   {
-    "content": "Replace blocked external images with Cloudinary-hosted assets",
+    "content": "Replace blocked external images with Cloudinary-hosted assets (optional enhancement)",
     "status": "pending"
   },
   {
