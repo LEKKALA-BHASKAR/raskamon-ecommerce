@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Check, X, Trash2 } from 'lucide-react';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const AdminReviews = () => {
@@ -31,7 +30,7 @@ const AdminReviews = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-heading text-xl font-semibold">Reviews</h2>
         <select value={filter} onChange={(e) => setFilter(e.target.value)} className="text-sm border px-3 py-2 rounded-lg focus:outline-none">
@@ -65,7 +64,7 @@ const AdminReviews = () => {
           </div>
         ))}
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

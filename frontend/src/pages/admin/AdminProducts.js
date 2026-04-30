@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const AdminProducts = () => {
@@ -38,7 +37,7 @@ const AdminProducts = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="font-heading text-xl font-semibold">Products</h2>
@@ -139,7 +138,7 @@ const AdminProducts = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const COUPON_TYPES = ['flat', 'percentage', 'free_shipping'];
@@ -50,7 +49,7 @@ const AdminCoupons = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-heading text-xl font-semibold">Coupons</h2>
         <button onClick={() => openForm()} className="btn-primary flex items-center gap-2 py-2.5 px-5 text-sm"><Plus size={16} /> Create Coupon</button>
@@ -124,7 +123,7 @@ const AdminCoupons = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

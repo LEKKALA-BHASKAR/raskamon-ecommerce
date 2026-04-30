@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { Search, Eye } from 'lucide-react';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const STATUS_OPTIONS = ['', 'placed', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
@@ -51,7 +50,7 @@ const AdminOrders = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="font-heading text-xl font-semibold">Orders</h2>
@@ -139,7 +138,7 @@ const AdminOrders = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

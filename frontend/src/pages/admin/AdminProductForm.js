@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, Plus, Upload } from 'lucide-react';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const INITIAL = {
@@ -92,10 +91,10 @@ const AdminProductForm = () => {
     } finally { setSaving(false); }
   };
 
-  if (loading) return <AdminLayout><div className="space-y-4">{[1,2,3].map(i=><div key={i} className="h-12 skeleton rounded-xl"/>)}</div></AdminLayout>;
+  if (loading) return <><div className="space-y-4">{[1,2,3].map(i=><div key={i} className="h-12 skeleton rounded-xl"/>)}</div></>;
 
   return (
-    <AdminLayout>
+    <>
       <div className="max-w-3xl">
         <h2 className="font-heading text-xl font-semibold mb-6">{isNew ? 'Add New Product' : 'Edit Product'}</h2>
 
@@ -197,7 +196,7 @@ const AdminProductForm = () => {
           </div>
         </form>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

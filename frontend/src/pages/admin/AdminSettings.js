@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import AdminLayout from './AdminLayout';
 import { toast } from 'sonner';
 
 const AdminSettings = () => {
@@ -22,7 +21,7 @@ const AdminSettings = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <h2 className="font-heading text-xl font-semibold mb-6">Store Settings</h2>
       <div className="max-w-2xl space-y-6">
         <form onSubmit={handleSave}>
@@ -83,7 +82,7 @@ const AdminSettings = () => {
           <button type="submit" className="btn-primary w-full py-3">Save Settings</button>
         </form>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

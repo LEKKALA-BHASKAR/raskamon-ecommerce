@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { TrendingUp, ShoppingCart, Users, Package, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 import { Link } from 'react-router-dom';
 
 const STATUS_COLORS = { placed: '#3B82F6', confirmed: '#F59E0B', shipped: '#8B5CF6', out_for_delivery: '#F97316', delivered: '#10B981', cancelled: '#EF4444' };
@@ -38,18 +37,18 @@ const AdminDashboard = () => {
   }, []);
 
   if (loading) return (
-    <AdminLayout>
+    <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[1,2,3,4].map(i => <div key={i} className="h-28 skeleton rounded-xl" />)}
       </div>
       <div className="h-64 skeleton rounded-xl" />
-    </AdminLayout>
+    </>
   );
 
   const pieData = (stats?.ordersByStatus || []).map(s => ({ name: s._id, value: s.count, color: STATUS_COLORS[s._id] || '#94A3B8' }));
 
   return (
-    <AdminLayout>
+    <>
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KPICard icon={TrendingUp} label="Total Revenue" value={`₹${(stats?.totalRevenue || 0).toLocaleString('en-IN')}`} color="#1A3C34" />
@@ -159,7 +158,7 @@ const AdminDashboard = () => {
           </p>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

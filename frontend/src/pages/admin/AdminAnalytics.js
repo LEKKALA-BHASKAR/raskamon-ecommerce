@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import api from '../../utils/api';
-import AdminLayout from './AdminLayout';
 
 const AdminAnalytics = () => {
   const [period, setPeriod] = useState('30d');
@@ -16,7 +15,7 @@ const AdminAnalytics = () => {
   }, [period]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-heading text-xl font-semibold">Analytics</h2>
         <select value={period} onChange={(e) => setPeriod(e.target.value)}
@@ -63,7 +62,7 @@ const AdminAnalytics = () => {
           ) : <div className="h-64 flex items-center justify-center text-gray-400">No order data</div>}
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 
