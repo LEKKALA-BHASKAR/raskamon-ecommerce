@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
-import random
+import secrets
 import string
 
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -47,7 +47,8 @@ def decode_token(token: str) -> dict:
 
 
 def generate_otp(length: int = 6) -> str:
-    return ''.join(random.choices(string.digits, k=length))
+    """Generate cryptographically secure OTP"""
+    return ''.join(secrets.choice(string.digits) for _ in range(length))
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):

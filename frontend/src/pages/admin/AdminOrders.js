@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Search, Eye } from 'lucide-react';
 import api from '../../utils/api';
@@ -18,7 +18,7 @@ const AdminOrders = () => {
   const [newStatus, setNewStatus] = useState('');
   const [statusNote, setStatusNote] = useState('');
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15, ...(status && { status }) });
@@ -26,10 +26,13 @@ const AdminOrders = () => {
       setOrders(res.data.orders);
       setTotal(res.data.total);
       setPages(res.data.pages);
-    } catch {} finally { setLoading(false); }
-  };
+    } catch (err) {
+      toast.error('Failed to load orders');
+      console.error('Fetch orders error:', err);
+    } finally { setLoading(false); }
+  }, [page, status]);
 
-  useEffect(() => { fetchOrders(); }, [page, status]);
+  useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   const updateStatus = async (orderId) => {
     if (!newStatus) return;

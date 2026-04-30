@@ -192,7 +192,7 @@ const ProductDetail = () => {
               <div className="flex gap-2">
                 {product.images.map((img, i) => (
                   <button
-                    key={i}
+                    key={img}
                     onClick={() => setSelectedImage(i)}
                     className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === i ? 'border-[var(--sattva-forest)]' : 'border-transparent'}`}
                   >

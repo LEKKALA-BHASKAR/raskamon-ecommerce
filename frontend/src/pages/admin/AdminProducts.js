@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
 import api from '../../utils/api';
@@ -13,7 +13,7 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15, ...(search && { search }) });
@@ -21,10 +21,13 @@ const AdminProducts = () => {
       setProducts(res.data.products);
       setTotal(res.data.total);
       setPages(res.data.pages);
-    } catch {} finally { setLoading(false); }
-  };
+    } catch (err) {
+      toast.error('Failed to load products');
+      console.error('Fetch products error:', err);
+    } finally { setLoading(false); }
+  }, [page, search]);
 
-  useEffect(() => { fetchProducts(); }, [page, search]);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const deleteProduct = async (id) => {
     if (!window.confirm('Delete this product?')) return;

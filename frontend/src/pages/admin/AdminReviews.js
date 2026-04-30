@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Check, X, Trash2 } from 'lucide-react';
 import api from '../../utils/api';
 import { toast } from 'sonner';
@@ -8,13 +8,13 @@ const AdminReviews = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
 
-  const fetchReviews = () => {
+  const fetchReviews = useCallback(() => {
     setLoading(true);
     const params = filter !== '' ? `?approved=${filter}` : '';
     api.get(`/admin/reviews${params}`).then(r => setReviews(r.data.reviews)).finally(() => setLoading(false));
-  };
+  }, [filter]);
 
-  useEffect(() => { fetchReviews(); }, [filter]);
+  useEffect(() => { fetchReviews(); }, [fetchReviews]);
 
   const approve = async (id, val) => {
     await api.put(`/admin/reviews/${id}/approve?approved=${val}`);

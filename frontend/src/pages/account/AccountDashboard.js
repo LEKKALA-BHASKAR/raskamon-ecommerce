@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { User, Package, Heart, MapPin, Settings, LogOut, ChevronRight, Star, Bell } from 'lucide-react';
 import api from '../../utils/api';

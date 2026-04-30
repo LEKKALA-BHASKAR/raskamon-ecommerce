@@ -77,7 +77,8 @@ export const BlogPost = () => {
           </div>
           <h1 className="font-heading text-3xl font-semibold text-[var(--sattva-ink)] mb-3">{post.title}</h1>
           <p className="text-gray-500 text-sm mb-8">By {post.author} • {new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          <div className="prose prose-sm max-w-none text-[var(--sattva-ink)]" dangerouslySetInnerHTML={{ __html: post.body }} />
+          {/* Render as plain text to prevent XSS - consider using a markdown library for rich formatting */}
+          <div className="prose prose-sm max-w-none text-[var(--sattva-ink)] whitespace-pre-wrap">{post.body}</div>
         </div>
       </div>
     </Layout>

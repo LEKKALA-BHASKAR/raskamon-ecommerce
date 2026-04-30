@@ -500,9 +500,9 @@ class InviteStaffIn(BaseModel):
 @router.post('/staff')
 async def invite_staff(data: InviteStaffIn, admin=Depends(require_admin)):
     from utils.security import hash_password
-    import random
+    import secrets
     import string
-    temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+    temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
     user_id = str(uuid.uuid4())
     doc = {
         '_id': user_id,

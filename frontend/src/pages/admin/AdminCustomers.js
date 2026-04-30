@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Search, UserX, UserCheck } from 'lucide-react';
 import api from '../../utils/api';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ const AdminCustomers = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 15, ...(search && { search }) });
@@ -19,10 +19,13 @@ const AdminCustomers = () => {
       setCustomers(res.data.customers);
       setTotal(res.data.total);
       setPages(res.data.pages);
-    } catch {} finally { setLoading(false); }
-  };
+    } catch (err) {
+      toast.error('Failed to load customers');
+      console.error('Fetch customers error:', err);
+    } finally { setLoading(false); }
+  }, [page, search]);
 
-  useEffect(() => { fetchCustomers(); }, [page, search]);
+  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
   const toggleBlock = async (id, blocked) => {
     try {
