@@ -1,34 +1,30 @@
 [
   {
-    "content": "Phase 1: Get integration playbooks (Cloudinary + Razorpay)",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 1: Create & run POC test script (Cloudinary + Razorpay)",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 1: Fix POC until both integrations pass",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 2: Get design guidelines from design_agent",
+    "content": "Run comprehensive E2E testing via testing_agent_v3 (Browse, Cart, Checkout COD, Orders, Admin flows)",
     "status": "in_progress"
   },
   {
-    "content": "Phase 2: Install all backend & frontend dependencies",
+    "content": "Fix all bugs reported by testing agent (prioritize P0 > P1 > P2)",
     "status": "pending"
   },
   {
-    "content": "Phase 2: Build complete FastAPI backend (models, routes, seed)",
+    "content": "Validate UI/UX against design_guidelines.md (colors, typography, dark mode, animations, responsive)",
     "status": "pending"
   },
   {
-    "content": "Phase 2: Build complete React frontend (all pages + components)",
+    "content": "Replace blocked external images with Cloudinary-hosted assets",
     "status": "pending"
   },
   {
-    "content": "Phase 2: End-to-end testing with testing_agent",
+    "content": "Implement PDF invoice generation for orders",
+    "status": "pending"
+  },
+  {
+    "content": "Add shipping tracking stub on user account dashboard",
+    "status": "pending"
+  },
+  {
+    "content": "Verify advanced filters (price slider, ratings, tags) work correctly",
     "status": "pending"
   }
 ]
