@@ -1,0 +1,34 @@
+[
+  {
+    "content": "Phase 1: Get integration playbooks (Cloudinary + Razorpay)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 1: Create & run POC test script (Cloudinary + Razorpay)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 1: Fix POC until both integrations pass",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 2: Get design guidelines from design_agent",
+    "status": "in_progress"
+  },
+  {
+    "content": "Phase 2: Install all backend & frontend dependencies",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Build complete FastAPI backend (models, routes, seed)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: Build complete React frontend (all pages + components)",
+    "status": "pending"
+  },
+  {
+    "content": "Phase 2: End-to-end testing with testing_agent",
+    "status": "pending"
+  }
+]
