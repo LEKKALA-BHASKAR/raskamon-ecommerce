@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingBag, User, Menu, X, Heart, ChevronDown, Sun, Moon } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, Heart, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
@@ -21,7 +21,6 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const { user, logout } = useAuth();
   const { itemCount, cartOpen, setCartOpen } = useCart();
   const navigate = useNavigate();
@@ -36,11 +35,6 @@ const Header = () => {
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
-
-  const toggleDark = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
-  };
 
   return (
     <>
@@ -75,8 +69,8 @@ const Header = () => {
             </motion.div>
           </Link>
 
-          {/* Desktop Nav */}
-          <nav data-testid="header-navigation-menu" className="hidden lg:flex items-center gap-1">
+          {/* Desktop Nav - Moved 20% higher */}
+          <nav data-testid="header-navigation-menu" className="hidden lg:flex items-center gap-1" style={{ transform: 'translateY(-20%)' }}>
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -102,19 +96,9 @@ const Header = () => {
               <Search size={20} />
             </motion.button>
 
-            {/* Dark mode */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleDark}
-              className="hidden sm:flex p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </motion.button>
-
-            {/* Wishlist */}
+            {/* Wishlist - Fixed to navigate to account page */}
             {user && (
-              <Link to="/account/wishlist">
+              <Link to="/account">
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   className="hidden sm:flex p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
