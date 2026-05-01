@@ -20,7 +20,7 @@ const SearchModal = ({ open, onClose }) => {
 
   const recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
 
-  const search = async (q) => {
+  const search = React.useCallback(async (q) => {
     if (!q.trim()) { setResults([]); return; }
     setLoading(true);
     try {
@@ -31,7 +31,7 @@ const SearchModal = ({ open, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setResults, setLoading]);
 
   const debouncedSearch = React.useMemo(() => debounce(search, 300), [search]);
 
