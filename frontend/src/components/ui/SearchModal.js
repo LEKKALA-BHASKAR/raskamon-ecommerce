@@ -33,7 +33,7 @@ const SearchModal = ({ open, onClose }) => {
     }
   };
 
-  const debouncedSearch = React.useCallback(useDebounce(search, 300), []);
+  const debouncedSearch = React.useMemo(() => useDebounce(search, 300), [search]);
 
   const handleInput = (e) => {
     const val = e.target.value;
