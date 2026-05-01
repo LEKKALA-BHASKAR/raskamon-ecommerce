@@ -30,7 +30,7 @@ const AccountDashboard = () => {
     if (!user) { navigate('/login'); return; }
     setProfileForm({ name: user.name || '', phone: user.phone || '' });
     fetchData();
-  }, [user]);
+  }, [user, navigate]);
 
   const fetchData = async () => {
     try {

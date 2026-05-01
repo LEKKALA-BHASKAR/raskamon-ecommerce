@@ -31,7 +31,7 @@ const Checkout = () => {
       const def = r.data?.find(a => a.isDefault);
       if (def) setAddress(def);
     }).catch(() => {});
-  }, [user, cart]);
+  }, [user, cart, navigate]);
 
   const subtotal = cart.total || 0;
   const shippingCharge = subtotal >= 499 ? 0 : 79;

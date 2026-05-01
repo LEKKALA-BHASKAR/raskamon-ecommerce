@@ -12,12 +12,12 @@ const AdminBlog = () => {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ title: '', body: '', excerpt: '', featuredImage: '', tags: '', isPublished: false });
 
-  const fetchPosts = () => {
+  const fetchPosts = React.useCallback(() => {
     setLoading(true);
     api.get(`/admin/blog?page=${page}`).then(r => { setPosts(r.data.posts); setTotal(r.data.total); }).finally(() => setLoading(false));
-  };
+  }, [page]);
 
-  useEffect(() => { fetchPosts(); }, [page]);
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const openForm = (post = null) => {
     setEditing(post?.id || null);

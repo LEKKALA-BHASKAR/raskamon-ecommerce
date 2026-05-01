@@ -62,7 +62,7 @@ const ProductDetail = () => {
       }
     };
     fetchProduct();
-  }, [slug]);
+  }, [slug, navigate]);
 
   const handleAddToCart = () => {
     if (!product) return;
