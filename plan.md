@@ -1,171 +1,268 @@
-# Sattva — Premium Indian Wellness & Lifestyle Store (Updated Plan)
+# Dr MediScie — Unified Commerce Platform (Incremental Migration Plan)
 
 ## 1) Objectives
-- Deliver a production-ready e-commerce web app with premium UI (tokens/fonts), responsive UX, SEO basics, and a PWA-ready shell.
-- Lock down the **core commerce flow** end-to-end: **browse → product → cart → checkout → Razorpay/COD → order created → invoice**.
-- Ensure external integrations are stable:
-  - **Razorpay payments** (create order + verify signature + webhook/idempotency)
-  - **Cloudinary media** (upload + transformations + safe delivery)
-- Provide a full admin panel for day-1 operations: products, categories, orders, coupons, banners, customers.
-- Seed realistic catalog/content so the storefront looks complete on launch.
-- Ensure environment/proxy correctness (HTTPS) so the app works reliably in production-like hosted previews.
+- Transform the existing **Dr MediScie** storefront into a **high-scale Unified Commerce Platform** combining:
+  - **B2C** (retail customers)
+  - **B2B** (approved business buyers only)
+  - **Controlled multivendor marketplace** (restricted vendor model)
+  - **Centralized Admin Finance Control** (all revenue collected by Admin; vendor settlements tracked/payouted by Admin)
+- Enforce **non-negotiable business rules** at the API level (no UI-only enforcement):
+  - **B2B gatekeeping**: B2B registration → `PENDING` → Admin approve/reject → only `APPROVED` can login + browse + order.
+  - **Vendor restrictions**: vendors can manage only their products + view their analytics; no customer data, no payments, no withdrawals.
+  - **Dual pricing isolation**: strict separation of **B2C retail pricing** vs **B2B wholesale pricing**; no leakage.
+  - **Visibility rules**: vendor products visible **only** to approved B2B; admin products visible to both (configurable).
+  - **Payments**: 100% payments to **Admin account** (Razorpay primary). Vendors are settled via internal payout system.
+- Build production-grade foundations:
+  - JWT Access + Refresh tokens, **RBAC guards**, rate limiting, audit logs
+  - Pagination everywhere, optimized MongoDB indexes
+  - Redis caching (product listing, sessions, rate limits)
+  - Background jobs (Celery + Redis): invoices, emails/notifications, settlement computation
 
 **Current status (high-level)**
-- Backend: FastAPI + MongoDB running; seeded data present.
-- Frontend: React app now routes correctly and compiles; homepage loads.
-- Key integration blockers fixed: HTTPS mixed-content redirects, routing boilerplate, banner rendering logic.
-- Next: comprehensive E2E testing + UI/UX polish and guideline conformance.
+- ✅ Existing Dr MediScie UI rebrand completed (logo, header, auth pages, admin sidebar).
+- ✅ Frontend compiles and loads; routing stabilized; hero banner rendering fixed.
+- ✅ Backend (FastAPI + MongoDB) running; seeding works.
+- ✅ Mixed-content/HTTPS redirect issues resolved.
+- ✅ Initial E2E run previously completed for B2C flows (storefront + admin) with high success.
+- ✅ Enterprise architecture document created: `/app/ARCHITECTURE.md`.
+- ⏳ Next: **Unified Commerce Phase 1 (User Management & RBAC)** implementation.
 
 ---
 
 ## 2) Implementation Steps
 
-### Phase 1 — Core Flow POC (Isolation: payments + media)
-**Goal:** do not proceed until Razorpay + Cloudinary work reliably with our environment.
+### Phase 0 — Architecture & Design Baseline (Enterprise)
+**Goal:** lock the architecture, schemas, API contracts before deep changes.
 
-**Status:** ✅ *POC scripts implemented*; ⚠️ *Razorpay credentials may still fail authentication depending on provided keys*.
+**Status:** ✅ *Completed*
 
-**User stories (POC)**
-1. As a dev, I can upload an image to Cloudinary and receive a secure URL to display in UI.
-2. As a customer, I can create a Razorpay order for a known amount.
-3. As a customer, I can complete a Razorpay test payment and we can verify the signature server-side.
-4. As a system, I can receive and validate Razorpay webhooks for payment events.
-5. As a system, I can persist a minimal Order record and mark paymentStatus accordingly.
+**Deliverables**
+- ✅ Created `/app/ARCHITECTURE.md` including:
+  - Role matrix, B2B gating workflow, vendor restrictions
+  - Dual pricing model and visibility rules
+  - Centralized finance model (transactions, commission logs, vendor payouts)
+  - Mandatory collections and indexing strategy
+  - Proposed API structure `/api/v1/*`
+  - Redis/Celery scaling plan
 
-**Steps**
-- Web research: Razorpay best practices (Orders API, signature verification, webhooks), FastAPI patterns, Cloudinary signed uploads.
-- Create standalone scripts (implemented under `/app/tests/poc_test.py`):
-  - Cloudinary upload verification
-  - Razorpay order create + signature verification
-- Implement FastAPI endpoints:
-  - `POST /api/upload/*` (Cloudinary)
-  - `POST /api/payments/create-order`, `POST /api/payments/verify`, webhook endpoint
-- Acceptance for Phase 1:
-  - Repeatable success for create-order + verify
-  - Cloudinary assets render via returned URL(s)
-
-**Notes / known caveat**
-- Razorpay test keys previously returned `BAD_REQUEST_ERROR` during POC; may require fresh test credentials for final E2E payment testing.
+**Acceptance**
+- Architecture is approved and becomes source-of-truth for implementation phases.
 
 ---
 
-### Phase 2 — V1 App Development (MVP storefront + admin-lite)
-**Goal:** working storefront with core checkout, clean premium UI, seed data, and basic admin.
+### Phase 1 — User Management & RBAC (B2B Gatekeeping + Vendor Approval)
+**Goal:** implement strict access control foundations for B2B and vendors with admin approvals.
 
-**Status:** ✅ *Implementation largely complete*; ✅ *Frontend now compiles and loads*; ⚠️ *Full E2E testing pending*.
+**Status:** ⏳ *Not started (implementation)* — **Starting now**
 
-**User stories (V1)**
-1. As a shopper, I can browse categories and product lists with filters/sort and quickly find items.
-2. As a shopper, I can view a product page, select variant/qty, and add to cart.
-3. As a shopper, I can checkout with COD or Razorpay and receive an order confirmation.
-4. As a shopper, I can see my orders list and order details (timeline + totals).
-5. As an admin, I can create/edit products with images uploaded to Cloudinary and manage stock.
+**Core rules to enforce (must-pass)**
+1. B2B users register with company details + documents; status defaults to `PENDING`.
+2. Until `APPROVED`: **cannot login**, cannot browse products, cannot place orders.
+3. Vendors must be `APPROVED` by admin.
+4. RBAC enforced on every endpoint; audit logs recorded for admin actions.
 
-**Backend (FastAPI + Motor, `/api/*`)**
-- Core models + indexes: User, Category, Product, Order, Coupon, Review, Banner.
-- Public APIs: products, categories, cart, checkout/orders, payments, blog, banners.
-- Admin APIs: CRUD products/categories/coupons/banners; orders management.
-- Seed pipeline: categories + products + banners + coupons + admin user.
+**Backend (FastAPI + Motor)**
+- Data model updates:
+  - Extend `users` schema with:
+    - `role` expanded: `B2C_CUSTOMER`, `B2B_BUYER`, `VENDOR`, `ADMIN`, `SUB_ADMIN`
+    - `b2b_profile` with `approval_status`, GST/PAN, docs, approval metadata
+    - `vendor_profile` with `approval_status`, commission rate, bank details (masked), vendor_id
+  - Add new collections (Phase 1 minimal):
+    - `audit_logs` (mandatory)
+    - `notifications` (in-app + email-ready)
+- Auth flows:
+  - `POST /api/v1/auth/register` (B2C)
+  - `POST /api/v1/auth/register-b2b` (B2B with docs)
+  - `POST /api/v1/auth/register-vendor` (Vendor onboarding)
+  - `POST /api/v1/auth/login` (universal) with **role gating**:
+    - deny login for B2B `PENDING/REJECTED`
+    - deny login for Vendor `PENDING/REJECTED`
+  - Access + Refresh token lifecycle + revocation strategy
+- RBAC middleware:
+  - Role guard + permission guard
+  - Resource-scoped access helpers (vendor can only access own resources)
+- Admin approvals:
+  - `GET /api/v1/admin/b2b-users?status=PENDING`
+  - `POST /api/v1/admin/b2b-users/{id}/approve|reject`
+  - `GET /api/v1/admin/vendors?status=PENDING`
+  - `POST /api/v1/admin/vendors/{id}/approve|reject`
+- Security hardening:
+  - Rate limiting (Redis-backed)
+  - Audit logs for approval actions + sensitive operations
 
-**Important platform fixes applied (integration stability)**
-- ✅ Fixed frontend router: removed boilerplate App.js, enabled full routing map for client + admin.
-- ✅ Fixed FastAPI HTTPS redirect issue:
-  - Set `redirect_slashes=False` to prevent 307 redirects causing HTTPS→HTTP mixed-content blocks.
-- ✅ Updated router handlers to support both `/prefix` and `/prefix/` forms:
-  - Added `@router.get('')` in key routers (categories/products/orders listing).
-- ✅ Fixed Home Hero banner rendering bug:
-  - Removed broken `loading` state that never updated when banners arrived.
+**Frontend (React)**
+- Add role-aware auth UX:
+  - Separate registration options: B2C / B2B / Vendor
+  - B2B registration form: company name, GST, PAN, upload docs
+  - Vendor registration form: store/business info, upload docs
+- Login UX:
+  - Show clean error state for `B2B_NOT_APPROVED` and `VENDOR_NOT_APPROVED`
+  - Role-based post-login redirect:
+    - B2C → `/`
+    - B2B → `/products` (B2B view)
+    - Vendor → `/vendor/dashboard`
+    - Admin → `/admin/dashboard`
+- Admin UI:
+  - Add pages/tables for approving B2B users and vendors
+  - Audit log viewer (basic table + filters)
 
-**Frontend (React 18 + Tailwind + Framer Motion)**
-- Design system + UI primitives (shadcn-style components) present under `src/components/ui/`.
-- Pages implemented: Home, PLP, PDP, Search, Blog, Static pages, Checkout, Order Success, Account Dashboard.
-- Admin pages implemented: dashboard, products CRUD, categories, coupons, banners, orders, customers, reviews, analytics, settings.
-
-**End-of-phase test**
-- Execute one full E2E run: seed → browse → add to cart → checkout → COD and Razorpay (if keys work) → order created → order visible in account → admin updates status.
+**End-of-phase test (must)**
+- B2B register → attempt login → denied → admin approves → login succeeds → can browse B2B products.
+- Vendor register → attempt login → denied → admin approves → vendor dashboard accessible.
+- Verify audit log entries created for approve/reject actions.
 
 ---
 
-### Phase 3 — Add Auth + Account + Operational Features (production hardening)
-**Goal:** stabilize authentication/account flows and operational reliability.
+### Phase 2 — Product System (Dual Pricing + Visibility + Vendor Products)
+**Goal:** enforce dual pricing and visibility rules with vendor-controlled product CRUD.
 
-**Status:** ✅ Implemented JWT auth (email/password), refresh handling in client; ⚠️ E2E validation pending.
+**Status:** ⏳ Not started
 
-**User stories (Auth/Account)**
-1. As a user, I can sign up/login with email/password and stay logged in.
-2. As a user, I can reset my password (if enabled in PRD; OTP/email may be staged).
-3. As a user, I can save multiple addresses and reuse them at checkout.
-4. As a user, I can maintain wishlist across devices (if enabled).
-5. As an admin, I can manage customers and block/unblock accounts.
+**Core rules to enforce (must-pass)**
+1. Every product has both `b2c_price` and `b2b_price` (isolated).
+2. Vendor products:
+   - ❌ not visible to B2C
+   - ✅ visible only to **approved B2B**
+3. Admin products visible to both (config flag).
+4. API must strictly return only correct price fields based on role.
 
 **Backend**
-- JWT access + refresh; password hashing; RBAC (`customer`, `admin`).
-- Rate limiting + audit logging (recommended for production readiness).
+- Product schema migration:
+  - Add `b2c_price`, `b2b_price`, `visibility`, `vendor_id`, `approval.status`.
+- Role-based product projection:
+  - B2C: hide `b2b_price` and hide vendor products
+  - Approved B2B: hide `b2c_price`, show vendor products
+  - Vendor: only own products
+  - Admin: all
+- Vendor product endpoints:
+  - `GET/POST/PUT/DELETE /api/v1/vendor/products`
+  - New vendor products default to `approval.status=PENDING` and `visibility.b2b_visible=false` until approved.
+- Admin product approval endpoints:
+  - approve/reject vendor products and control visibility
+- Add Redis caching for product lists/detail with role-aware cache keys.
 
 **Frontend**
-- Auth screens: login/register/forgot password.
-- Account area: dashboard + orders.
+- B2C and B2B product listing views:
+  - B2C shows retail price UI
+  - B2B shows wholesale price + MOQ + tier pricing (optional)
+- Vendor product management UI:
+  - create/edit/delete products
+  - status badge: pending/approved/rejected
 
 **End-of-phase test**
-- E2E: register → login → add to cart → checkout → view orders; admin updates order status and user sees updates.
+- Vendor adds product → pending (not visible) → admin approves → visible to approved B2B only.
+- B2C never sees vendor products or wholesale prices.
 
 ---
 
-### Phase 4 — Premium Commerce Features + SEO/PWA + Reliability
-**Goal:** premium polish and reliability: invoices, shipping tracking stubs, advanced filters, SEO/PWA.
+### Phase 3 — Order System (Multi-vendor + Order Splitting + B2B Ordering)
+**Goal:** implement multi-vendor orders with admin-controlled payment and vendor order visibility.
 
-**Status:** ⏳ Not started / partially stubbed.
-
-**User stories (Premium)**
-1. As a shopper, I can apply coupons and see accurate discount rules at cart/checkout.
-2. As a shopper, I can write reviews with images and see rating breakdown.
-3. As a shopper, I can use instant search suggestions and recent searches.
-4. As an admin, I can manage banners, flash sales, and low-stock alerts.
-5. As a store owner, I can view sales analytics and export reports.
+**Status:** ⏳ Not started
 
 **Backend**
-- Coupons: validation, usage limits, expiry, min order, max uses.
-- Reviews: moderation, verified purchase.
-- Shipping: zones/free-above logic; tax config.
-- Invoices: PDF generation + download endpoint.
-- Payments: webhook reliability (idempotency keys, event log collection).
+- Order schema migration:
+  - order items include vendor attribution, price_type (B2C/B2B), commission fields
+  - order splitting (`vendor_splits`) for settlement tracking
+- B2B order rules:
+  - MOQ enforcement
+  - optional PO number and GST invoice details
+- Vendor order endpoints (read-only + fulfillment status updates limited):
+  - `GET /api/v1/vendor/orders`
+  - `PUT /api/v1/vendor/orders/{id}/status` (restricted transitions)
 
 **Frontend**
-- Enhanced PLP: advanced filters (price slider, rating filter, tag multi-select), grid/list toggle.
-- PDP: gallery enhancements, pincode checker, share, related products.
-- SEO: metadata + structured data + sitemap.
-- PWA: manifest + offline shell.
+- B2B checkout:
+  - billing details + GST
+  - bulk ordering UX
+- Vendor dashboard:
+  - list vendor-specific orders
+  - update status: processing/shipped
 
 **End-of-phase test**
-- Regression suite on core flows + admin ops; verify Lighthouse basics (performance/SEO/accessibility).
+- Mixed cart containing admin + vendor products → order created → split by vendor → vendor sees only their portion.
+
+---
+
+### Phase 4 — Financial System (Admin Payments + Ledger + Commission + Vendor Payouts)
+**Goal:** build centralized finance: transaction logging, commission, payout ledger, refund tracking.
+
+**Status:** ⏳ Not started
+
+**Backend**
+- Collections:
+  - `transactions`, `commission_logs`, `vendor_payouts`
+- Razorpay:
+  - all orders paid to admin Razorpay account
+  - webhook + idempotency event log
+- Commission computation:
+  - per item, stored at order time
+- Vendor settlement workflow:
+  - create payout batch for date range
+  - mark payout complete with UTR, date, amount, status
+- Background jobs:
+  - payout report generation
+  - invoice PDFs
+
+**Frontend**
+- Admin finance dashboard:
+  - transactions list
+  - commissions
+  - vendor payouts workflow (create, mark paid with UTR)
+- Vendor finance view:
+  - payout history (read-only)
+
+**End-of-phase test**
+- Place B2B order → transaction log created → commission log created → payout batch generated → mark paid with UTR.
+
+---
+
+### Phase 5 — Admin Super Control Panel (Approvals + Governance + Reports)
+**Goal:** one place to control everything: approvals, visibility rules, commissions, disputes, refunds, reports.
+
+**Status:** ⏳ Not started
+
+**Backend**
+- Admin endpoints for:
+  - B2B approvals, vendor approvals, product approvals
+  - pricing rules + visibility rules
+  - refunds + disputes
+  - reporting exports (CSV)
+  - audit log search
+
+**Frontend**
+- Admin pages:
+  - B2B approvals queue
+  - vendor approvals queue
+  - product approvals queue
+  - finance center
+  - audit log viewer
+  - analytics dashboards
+
+**End-of-phase test**
+- All governance flows function; audit logs cover sensitive actions.
 
 ---
 
 ## 3) Next Actions (Immediate)
-1. **Run comprehensive E2E testing** (use `testing_agent_v3`) across:
-   - Browse → PLP filters/sort
-   - PDP → add to cart
-   - Cart drawer updates
-   - Checkout (COD)
-   - Checkout (Razorpay if keys allow)
-   - Order success + order history
-   - Admin login + dashboard + orders/products CRUD sanity
-2. Fix any bugs discovered by E2E testing (prioritize P0 blockers).
-3. UI/UX validation against `/app/design_guidelines.md`:
-   - dark mode toggle, typography, spacing, Framer Motion polish, responsiveness.
-4. Address external asset delivery issues (optional but recommended):
-   - Replace blocked third-party images (Unsplash/Wikimedia ORB) with Cloudinary-hosted assets for consistent rendering.
-5. Implement remaining PRD deliverables:
-   - PDF invoices
-   - Shipping tracking stub integration on user account
-   - Advanced filters performance + correctness
+1. **Update `/app/plan.md` to Unified Commerce plan** (this document).
+2. Begin **Phase 1 backend changes**:
+   - extend users schema + add `b2b_profile` and `vendor_profile`
+   - implement `/api/v1/auth/register-b2b` and `/api/v1/auth/register-vendor`
+   - implement login gating for B2B/Vendor approvals
+3. Add **admin approval APIs** + audit logs.
+4. Add **frontend**: B2B registration page + vendor registration page + admin approval screens.
+5. Run targeted E2E:
+   - B2B pending → denied login → approved → access
+   - vendor pending → denied login → approved → vendor dashboard access
 
 ---
 
 ## 4) Success Criteria
-- **Core checkout succeeds** for both **COD** and **Razorpay** (when valid test keys are provided), creating accurate Orders and updating payment status via verify/webhook.
-- No HTTPS mixed-content issues; no redirect-related breakages (`/api/*` endpoints stable without trailing slashes).
-- Cloudinary uploads are reliable; images render correctly across Home/PLP/PDP/Admin.
-- Seeded storefront looks complete (categories, products, banners) and is fully responsive.
-- Admin can manage products/orders without breaking storefront.
-- No critical bugs in one full E2E run per phase; regression tests pass after each phase.
+- **B2B strict gatekeeping**: pending/rejected B2B users have **zero access** (cannot login, cannot view products, cannot order).
+- **Vendor restrictions enforced**: vendors can only manage own products and view own analytics; no payments and no customer data.
+- **Dual pricing isolation**: B2C never receives wholesale fields; B2B never receives retail-only price fields.
+- **Vendor product visibility**: vendor products visible only to approved B2B; never to B2C.
+- **Centralized admin finance**: all payments go to admin; vendor payout system logs UTR/date/status.
+- **RBAC, rate limiting, audit logs** present and enforced across protected APIs.
+- Performance basics: pagination everywhere; indexes defined; Redis caching introduced for high-traffic endpoints.
