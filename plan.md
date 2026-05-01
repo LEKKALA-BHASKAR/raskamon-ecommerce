@@ -12,20 +12,29 @@
   - **Dual pricing isolation**: strict separation of **B2C retail pricing** vs **B2B wholesale pricing**; no leakage.
   - **Visibility rules**: vendor products visible **only** to approved B2B; admin products visible to both (configurable).
   - **Payments**: 100% payments to **Admin account** (Razorpay primary). Vendors are settled via internal payout system.
-- Build production-grade foundations:
-  - JWT Access + Refresh tokens, **RBAC guards**, rate limiting, audit logs
+- Build production-grade foundations incrementally:
+  - JWT Access + Refresh tokens, **RBAC guards**, basic rate limiting, audit logs
   - Pagination everywhere, optimized MongoDB indexes
-  - Redis caching (product listing, sessions, rate limits)
-  - Background jobs (Celery + Redis): invoices, emails/notifications, settlement computation
+  - Future: Redis caching + background jobs (Celery/Redis) for invoices/emails/settlements
 
 **Current status (high-level)**
 - ✅ Existing Dr MediScie UI rebrand completed (logo, header, auth pages, admin sidebar).
 - ✅ Frontend compiles and loads; routing stabilized; hero banner rendering fixed.
 - ✅ Backend (FastAPI + MongoDB) running; seeding works.
 - ✅ Mixed-content/HTTPS redirect issues resolved.
-- ✅ Initial E2E run previously completed for B2C flows (storefront + admin) with high success.
 - ✅ Enterprise architecture document created: `/app/ARCHITECTURE.md`.
-- ⏳ Next: **Unified Commerce Phase 1 (User Management & RBAC)** implementation.
+- ✅ Phase 1 backend foundation files created:
+  - `/app/backend/routers/auth_v2.py` (B2C enhanced registration + B2B/vendor registration + gated universal login)
+  - `/app/backend/routers/admin_users.py` (admin approval queues + approve/reject + commission + audit log view)
+  - `/app/backend/middleware/rbac.py` (role gating + permission matrix + basic in-memory rate limiter)
+  - `/app/backend/utils/audit.py` (audit logger)
+  - `/app/backend/models/user.py` (target unified schema; not fully wired yet)
+- ⏳ **P0 blocker:** new Phase 1 routers are **unmounted** in `/app/backend/server.py` → endpoints unreachable.
+- ⚠️ **Critical compatibility risk (must address while integrating Phase 1):**
+  - Legacy auth (`/api/auth/*`) uses Mongo `_id`, legacy roles (`customer/admin/manager/...`) and JWT `sub` semantics.
+  - New Phase 1 (`auth_v2/admin_users`) expects `users.id` field and role values like `ADMIN`, `B2B_BUYER`, `VENDOR`.
+  - `utils.security.get_current_user()` currently fetches users by Mongo `_id` using `sub` from token.
+  - If we mount Phase 1 routers without a bridge, admin approvals and RBAC checks can break or be unusable.
 
 ---
 
@@ -53,63 +62,99 @@
 ### Phase 1 — User Management & RBAC (B2B Gatekeeping + Vendor Approval)
 **Goal:** implement strict access control foundations for B2B and vendors with admin approvals.
 
-**Status:** ⏳ *Not started (implementation)* — **Starting now**
+**Status:** ⏳ *In progress* — **backend integration is next**
+
+**Phase 1 defaults (confirmed)**
+- GST/PAN validation: **lenient** for MVP (basic presence; strict regex can be Phase 1.1/Phase 2 hardening)
+- Business document uploads: **defer to post-approval** (no Cloudinary dependency in Phase 1)
+- Notifications: **in-app status only** (no email sending in Phase 1)
+- Admin credentials: keep existing legacy admin for now: `admin@sattva.in / admin@1234`
 
 **Core rules to enforce (must-pass)**
-1. B2B users register with company details + documents; status defaults to `PENDING`.
-2. Until `APPROVED`: **cannot login**, cannot browse products, cannot place orders.
-3. Vendors must be `APPROVED` by admin.
-4. RBAC enforced on every endpoint; audit logs recorded for admin actions.
+1. B2B users register with company details; status defaults to `PENDING`.
+2. Until `APPROVED`: **cannot login** (hard deny in backend).
+3. Vendors must be `APPROVED` by admin to login.
+4. RBAC enforced on admin approval endpoints; audit logs recorded for admin actions.
 
-**Backend (FastAPI + Motor)**
-- Data model updates:
-  - Extend `users` schema with:
-    - `role` expanded: `B2C_CUSTOMER`, `B2B_BUYER`, `VENDOR`, `ADMIN`, `SUB_ADMIN`
-    - `b2b_profile` with `approval_status`, GST/PAN, docs, approval metadata
-    - `vendor_profile` with `approval_status`, commission rate, bank details (masked), vendor_id
-  - Add new collections (Phase 1 minimal):
-    - `audit_logs` (mandatory)
-    - `notifications` (in-app + email-ready)
-- Auth flows:
-  - `POST /api/v1/auth/register` (B2C)
-  - `POST /api/v1/auth/register-b2b` (B2B with docs)
-  - `POST /api/v1/auth/register-vendor` (Vendor onboarding)
-  - `POST /api/v1/auth/login` (universal) with **role gating**:
-    - deny login for B2B `PENDING/REJECTED`
-    - deny login for Vendor `PENDING/REJECTED`
-  - Access + Refresh token lifecycle + revocation strategy
-- RBAC middleware:
-  - Role guard + permission guard
-  - Resource-scoped access helpers (vendor can only access own resources)
-- Admin approvals:
-  - `GET /api/v1/admin/b2b-users?status=PENDING`
-  - `POST /api/v1/admin/b2b-users/{id}/approve|reject`
-  - `GET /api/v1/admin/vendors?status=PENDING`
-  - `POST /api/v1/admin/vendors/{id}/approve|reject`
-- Security hardening:
-  - Rate limiting (Redis-backed)
-  - Audit logs for approval actions + sensitive operations
+#### Phase 1A — Backend integration (P0) — ✅ COMPLETED
+**Goal:** make Phase 1 endpoints reachable and functional without breaking existing B2C.
 
-**Frontend (React)**
-- Add role-aware auth UX:
-  - Separate registration options: B2C / B2B / Vendor
-  - B2B registration form: company name, GST, PAN, upload docs
-  - Vendor registration form: store/business info, upload docs
-- Login UX:
-  - Show clean error state for `B2B_NOT_APPROVED` and `VENDOR_NOT_APPROVED`
-  - Role-based post-login redirect:
-    - B2C → `/`
-    - B2B → `/products` (B2B view)
-    - Vendor → `/vendor/dashboard`
-    - Admin → `/admin/dashboard`
-- Admin UI:
-  - Add pages/tables for approving B2B users and vendors
-  - Audit log viewer (basic table + filters)
+**Result:** All Phase 1 backend endpoints live & functional. End-to-end smoke tested via curl:
+- B2B register → `PENDING` → login blocked (`B2B_NOT_APPROVED`) → admin approves → login succeeds with `APPROVED` status ✅
+- Vendor register → `PENDING` → login blocked (`VENDOR_NOT_APPROVED`) → admin approves → login succeeds with `vendor_id` + `store_name` ✅
+- B2B rejection flow works (`REJECTED` status stored with reason) ✅
+- Audit logs captured for all admin actions (APPROVE_B2B_USER, REJECT_B2B_USER, APPROVE_VENDOR, FAILED_LOGIN, USER_LOGIN, B2B_USER_REGISTERED, VENDOR_REGISTERED) ✅
+- Legacy B2C auth (`/api/auth/*`) still works — no regression ✅
+- Legacy admin (`admin@sattva.in`, role `'admin'`) can call new `/api/admin_users/*` endpoints via RBAC legacy-role bridge ✅
 
-**End-of-phase test (must)**
-- B2B register → attempt login → denied → admin approves → login succeeds → can browse B2B products.
-- Vendor register → attempt login → denied → admin approves → vendor dashboard accessible.
-- Verify audit log entries created for approve/reject actions.
+**Work items**
+1. **Mount Phase 1 routers** in `/app/backend/server.py` (non-breaking):
+   - `app.include_router(auth_v2.router, prefix="/api/auth_v2", tags=[...])`
+   - `app.include_router(admin_users.router, prefix="/api/admin_users", tags=[...])`
+2. **Initialize audit logger on startup**:
+   - call `init_audit_logger(db)` from `utils.audit` using `database.db`
+   - ensure audit logs write to `audit_logs` collection
+3. **Bridge legacy auth ↔ Phase 1 RBAC identity mismatch (P0)**
+   - Align `get_current_user()` and JWT payload usage so admin endpoints work.
+   - Preferred incremental strategy (minimal disruption):
+     - Update `utils.security.get_current_user()` to find users by either:
+       - `_id == payload.sub` (legacy) OR
+       - `id == payload.user_id` (Phase 1)
+     - Ensure Phase 1 login (`/api/auth_v2/login`) issues tokens compatible with `get_current_user()`.
+       - Option A (recommended): include `sub` equal to Mongo `_id` as well (requires storing `_id` consistently) OR
+       - Option B: update `get_current_user()` to use `user_id` claim for Phase 1.
+   - Ensure `require_role()` decorator receives the user properly (consistent kwarg naming `user` in routes).
+4. **Role mapping strategy (incremental)**
+   - Legacy roles are lower-case (`admin`, `manager`, `customer`). Phase 1 uses uppercase enums.
+   - Implement a temporary mapping layer (Phase 1A):
+     - treat legacy `admin` as `ADMIN`
+     - treat legacy `customer` as `B2C_CUSTOMER`
+   - Do not migrate all existing users immediately; only ensure admin approvals can be executed.
+5. **Indexes** (minimal Phase 1):
+   - add/create indexes for:
+     - `users.id` (unique, sparse)
+     - `users.b2b_profile.gst_number` (sparse)
+     - `users.vendor_profile.gstin` (sparse)
+     - `users.vendor_profile.store_slug` (sparse)
+
+**Acceptance (backend)**
+- `/api/auth_v2/register-b2b` creates user with role `B2B_BUYER` and `approval_status=PENDING`.
+- `/api/auth_v2/register-vendor` creates user with role `VENDOR` and `approval_status=PENDING`.
+- `/api/auth_v2/login` denies login for pending/rejected B2B & vendors.
+- Admin approval endpoints are callable using existing admin login token.
+- Audit logs are written for approve/reject actions.
+- No regression in existing B2C flows (`/api/auth/login`, storefront browsing, etc.).
+
+#### Phase 1B — Backend testing (P0)
+**Testing method:** manual curl (targeted) / backend testing agent.
+
+**Must-run test flows**
+1. B2B register → login denied (`B2B_NOT_APPROVED`) → admin approves → login succeeds.
+2. Vendor register → login denied (`VENDOR_NOT_APPROVED`) → admin approves → login succeeds.
+3. Audit logs show records for approval actions.
+
+#### Phase 1C — Frontend Phase 1 UI (P0)
+**Goal:** enable B2B/vendor onboarding and admin approval operations via UI.
+
+**Frontend work items**
+1. Registration split UX:
+   - B2C (existing)
+   - B2B registration form (company + GST + PAN + address + contact)
+   - Vendor registration form (business/store + GSTIN + PAN + bank fields + identity fields)
+   - Document uploads deferred; show placeholder text “upload after approval”.
+2. Admin approval UI:
+   - Pending B2B users table with detail view + approve/reject
+   - Pending vendors table + approve/reject
+   - (Optional in Phase 1C) audit log viewer
+3. Auth context upgrade (incremental):
+   - support new roles returned by `/api/auth_v2/login`
+   - display clean errors for pending/rejected
+   - role-based redirect
+
+**Acceptance (frontend)**
+- B2B and vendor can register from UI.
+- Admin can approve/reject from UI.
+- Pending users see meaningful message on login.
 
 ---
 
@@ -245,16 +290,13 @@
 ---
 
 ## 3) Next Actions (Immediate)
-1. **Update `/app/plan.md` to Unified Commerce plan** (this document).
-2. Begin **Phase 1 backend changes**:
-   - extend users schema + add `b2b_profile` and `vendor_profile`
-   - implement `/api/v1/auth/register-b2b` and `/api/v1/auth/register-vendor`
-   - implement login gating for B2B/Vendor approvals
-3. Add **admin approval APIs** + audit logs.
-4. Add **frontend**: B2B registration page + vendor registration page + admin approval screens.
-5. Run targeted E2E:
-   - B2B pending → denied login → approved → access
-   - vendor pending → denied login → approved → vendor dashboard access
+1. **Phase 1A (P0):** update `/app/backend/server.py` to mount:
+   - `/api/auth_v2` → `routers/auth_v2.py`
+   - `/api/admin_users` → `routers/admin_users.py`
+2. **Phase 1A (P0):** initialize audit logger on startup (`init_audit_logger(database.db)`).
+3. **Phase 1A (P0):** implement the **legacy ↔ Phase 1 auth compatibility bridge** so admin approvals work with existing admin token.
+4. **Phase 1B (P0):** run backend tests (curl/testing agent) for register → pending → approve → login.
+5. **Phase 1C (P0):** start frontend onboarding forms and admin approval UI.
 
 ---
 
@@ -264,5 +306,6 @@
 - **Dual pricing isolation**: B2C never receives wholesale fields; B2B never receives retail-only price fields.
 - **Vendor product visibility**: vendor products visible only to approved B2B; never to B2C.
 - **Centralized admin finance**: all payments go to admin; vendor payout system logs UTR/date/status.
-- **RBAC, rate limiting, audit logs** present and enforced across protected APIs.
-- Performance basics: pagination everywhere; indexes defined; Redis caching introduced for high-traffic endpoints.
+- **RBAC and audit logs** present and enforced across protected APIs.
+- **Compatibility preserved during migration**: existing B2C login and storefront flows remain operational while Phase 1 ships.
+- Performance basics: pagination everywhere; indexes defined; Redis caching introduced for high-traffic endpoints (Phase 2+).

@@ -565,7 +565,7 @@ async def login(credentials: LoginRequest, request: Request):
         "vendor_status": user.get('vendor_profile', {}).get('approval_status') if user['role'] == 'VENDOR' else None
     })
     
-    refresh_token = create_refresh_token(user['id'])
+    refresh_token = create_refresh_token({"sub": user['id'], "user_id": user['id']})
     
     # Store refresh token
     await users_col.update_one(

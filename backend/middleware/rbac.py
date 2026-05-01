@@ -24,65 +24,122 @@ class RBACException(HTTPException):
         )
 
 
+# Legacy lowercase roles → Phase 1 canonical roles mapping.
+# Allows incremental migration: existing admin users (role='admin') can still
+# access Phase 1 admin endpoints that require ['ADMIN'].
+LEGACY_ROLE_MAP = {
+    "admin": "ADMIN",
+    "manager": "ADMIN",       # legacy managers treated as admin for Phase 1
+    "sub_admin": "SUB_ADMIN",
+    "staff": "SUB_ADMIN",
+    "support": "SUB_ADMIN",
+    "customer": "B2C_CUSTOMER",
+    "vendor": "VENDOR",
+    "b2b": "B2B_BUYER",
+}
+
+
+def _canonical_role(role: Optional[str]) -> str:
+    if not role:
+        return ""
+    r = role.strip()
+    if not r:
+        return ""
+    # Already canonical (uppercase)?
+    if r.isupper():
+        return r
+    return LEGACY_ROLE_MAP.get(r.lower(), r.upper())
+
+
+def _extract_user(args: tuple, kwargs: dict) -> Optional[dict]:
+    """Find the authenticated user dict injected by FastAPI dependencies.
+
+    The user may be bound to any parameter name (e.g. `user`, `current_user`,
+    `admin_user`). We locate it by inspecting kwargs and args for any dict
+    value that has a 'role' key (heuristic, safe for our endpoints).
+    """
+    # Prefer well-known names first
+    for key in ("user", "current_user", "admin_user", "vendor_user", "b2b_user"):
+        candidate = kwargs.get(key)
+        if isinstance(candidate, dict) and "role" in candidate:
+            return candidate
+    # Fallback: scan remaining kwargs
+    for val in kwargs.values():
+        if isinstance(val, dict) and "role" in val and "email" in val:
+            return val
+    # Fallback: scan args
+    for val in args:
+        if isinstance(val, dict) and "role" in val and "email" in val:
+            return val
+    return None
+
+
 def require_role(allowed_roles: List[str]):
     """
-    Decorator to enforce role-based access control
-    
-    Usage:
-        @router.get("/admin/dashboard")
-        @require_role(["ADMIN", "SUB_ADMIN"])
-        async def get_dashboard(user=Depends(get_current_user)):
-            ...
+    Decorator to enforce role-based access control.
+
+    - Role matching is case-insensitive and respects legacy role names
+      (e.g. legacy 'admin' satisfies a requirement for 'ADMIN').
+    - The authenticated user can be bound to any parameter name; the
+      decorator locates it automatically.
     """
+    allowed_canonical = {_canonical_role(r) for r in allowed_roles}
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Extract user from kwargs (injected by get_current_user dependency)
-            user = kwargs.get('user') or kwargs.get('current_user')
-            
+            user = _extract_user(args, kwargs)
+
             if not user:
                 raise RBACException(
                     "Authentication required",
                     code="UNAUTHORIZED"
                 )
-            
-            # Check if user's role is in allowed roles
-            if user.get('role') not in allowed_roles:
+
+            user_role_canonical = _canonical_role(user.get('role'))
+
+            if user_role_canonical not in allowed_canonical:
                 logger.warning(
-                    f"RBAC violation: User {user.get('id')} with role {user.get('role')} "
-                    f"attempted to access resource requiring roles: {allowed_roles}"
+                    f"RBAC violation: user {user.get('id') or user.get('_id')} "
+                    f"role='{user.get('role')}' (canonical='{user_role_canonical}') "
+                    f"attempted access to {func.__name__} "
+                    f"requiring {sorted(allowed_canonical)}"
                 )
                 raise RBACException(
-                    f"Access denied. Required role: {' or '.join(allowed_roles)}",
+                    f"Access denied. Required role: {' or '.join(sorted(allowed_canonical))}",
                     code="INSUFFICIENT_PERMISSIONS"
                 )
-            
-            # Additional checks for B2B users
-            if user.get('role') == 'B2B_BUYER':
-                b2b_status = user.get('b2b_status')
+
+            # Additional status checks for B2B / Vendor users
+            if user_role_canonical == 'B2B_BUYER':
+                b2b_status = (
+                    user.get('b2b_status')
+                    or (user.get('b2b_profile') or {}).get('approval_status')
+                )
                 if b2b_status != 'APPROVED':
                     raise RBACException(
                         "Your B2B account is not approved. Please wait for admin approval.",
                         code="B2B_NOT_APPROVED"
                     )
-            
-            # Additional checks for Vendors
-            if user.get('role') == 'VENDOR':
-                vendor_status = user.get('vendor_status')
+
+            if user_role_canonical == 'VENDOR':
+                vendor_status = (
+                    user.get('vendor_status')
+                    or (user.get('vendor_profile') or {}).get('approval_status')
+                )
                 if vendor_status != 'APPROVED':
                     raise RBACException(
                         "Your vendor account is not approved. Please wait for admin approval.",
                         code="VENDOR_NOT_APPROVED"
                     )
-            
-            # Log successful access
+
             logger.info(
-                f"RBAC check passed: User {user.get('id')} ({user.get('role')}) "
-                f"accessed {func.__name__}"
+                f"RBAC pass: user={user.get('id') or user.get('_id')} "
+                f"role={user_role_canonical} → {func.__name__}"
             )
-            
+
             return await func(*args, **kwargs)
-        
+
         return wrapper
     return decorator
 

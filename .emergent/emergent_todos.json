@@ -1,30 +1,42 @@
 [
   {
-    "content": "Add data-testid attributes for search input and mobile menu for better testability",
-    "status": "pending"
-  },
-  {
-    "content": "Fix API root endpoint to return proper API info",
-    "status": "pending"
-  },
-  {
-    "content": "Validate UI/UX against design_guidelines.md (colors, typography, dark mode, animations, responsive)",
+    "content": "Update server.py: mount auth_v2 and admin_users routers + init_audit_logger on startup",
     "status": "completed"
   },
   {
-    "content": "Replace blocked external images with Cloudinary-hosted assets (optional enhancement)",
+    "content": "Bridge legacy auth compatibility: update get_current_user to handle both token formats & id/_id",
+    "status": "completed"
+  },
+  {
+    "content": "Fix require_role decorator: case-insensitive role match + flexible user kwarg detection",
+    "status": "completed"
+  },
+  {
+    "content": "Create MongoDB indexes for new B2B/vendor fields (sparse unique)",
+    "status": "completed"
+  },
+  {
+    "content": "Backend smoke test via curl: B2B register → pending login blocked → admin approve → login works",
+    "status": "completed"
+  },
+  {
+    "content": "[Phase 1C] Build B2B registration form page (company + GST + PAN + address + contact)",
     "status": "pending"
   },
   {
-    "content": "Implement PDF invoice generation for orders",
+    "content": "[Phase 1C] Build Vendor registration form page (business + bank + identity)",
     "status": "pending"
   },
   {
-    "content": "Add shipping tracking stub on user account dashboard",
+    "content": "[Phase 1C] Build Admin approval UI: pending B2B users + vendors queues with approve/reject",
     "status": "pending"
   },
   {
-    "content": "Verify advanced filters (price slider, ratings, tags) work correctly",
+    "content": "[Phase 1C] Update frontend AuthContext to handle new roles & PENDING/REJECTED error states",
+    "status": "pending"
+  },
+  {
+    "content": "Comprehensive frontend+backend test via testing_agent after Phase 1 full slice",
     "status": "pending"
   }
 ]

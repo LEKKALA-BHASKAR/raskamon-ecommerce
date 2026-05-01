@@ -59,11 +59,41 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if payload.get('type') != 'access':
         raise HTTPException(status_code=401, detail='Invalid token type')
     from database import users_col
-    user = await users_col.find_one({'_id': payload.get('sub')}, {'password': 0})
+
+    # Support both token formats:
+    #   * Legacy B2C:   { sub: <mongo _id / uuid>, email: ... }
+    #   * Phase 1:      { user_id: <usr_...>, email: ..., role: ... }
+    user = None
+    phase1_id = payload.get('user_id')
+    legacy_id = payload.get('sub')
+
+    if phase1_id:
+        user = await users_col.find_one({'id': phase1_id}, {'password': 0})
+    if not user and legacy_id:
+        user = await users_col.find_one({'_id': legacy_id}, {'password': 0})
+        if not user:
+            user = await users_col.find_one({'id': legacy_id}, {'password': 0})
+
     if not user:
         raise HTTPException(status_code=401, detail='User not found')
+
+    # Normalize user shape so downstream RBAC / handlers work uniformly
+    if 'id' not in user and '_id' in user:
+        user['id'] = user['_id']
+
+    # Derive status shortcuts expected by RBAC decorator
+    if user.get('role') == 'B2B_BUYER':
+        user['b2b_status'] = (user.get('b2b_profile') or {}).get('approval_status')
+    if user.get('role') == 'VENDOR':
+        user['vendor_status'] = (user.get('vendor_profile') or {}).get('approval_status')
+        user['vendor_id'] = (user.get('vendor_profile') or {}).get('vendor_id')
+
+    # Preserve original role string; RBAC decorator normalises case + legacy mapping
     if user.get('isBlocked'):
         raise HTTPException(status_code=403, detail='Account is blocked')
+    if user.get('is_active') is False:
+        raise HTTPException(status_code=403, detail='Account is inactive')
+
     return user
 
 

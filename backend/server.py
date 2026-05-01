@@ -10,7 +10,9 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Import routers
 from routers import auth, users, products, categories, cart, orders, reviews, payments, upload, coupons, admin
-from database import create_indexes
+from routers import auth_v2, admin_users
+from database import create_indexes, db as _mongo_db
+from utils.audit import init_audit_logger
 
 app = FastAPI(
     title="Sattva API",
@@ -67,6 +69,12 @@ app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(coupons.router, prefix="/api/coupons", tags=["coupons"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
+# ==================== PHASE 1: UNIFIED COMMERCE (B2B + VENDOR) ====================
+# These routers power the new B2B gatekeeping and vendor approval workflows.
+# They coexist with the legacy B2C auth (`/api/auth/*`) to enable incremental migration.
+app.include_router(auth_v2.router, prefix="/api/auth_v2", tags=["auth_v2"])
+app.include_router(admin_users.router, prefix="/api/admin_users", tags=["admin_users"])
+
 @app.get("/api")
 async def root():
     return {"message": "Sattva API v1.0.0", "status": "running"}
@@ -74,6 +82,20 @@ async def root():
 @app.on_event("startup")
 async def startup():
     await create_indexes()
+    # Initialize audit logger for Phase 1 RBAC endpoints
+    init_audit_logger(_mongo_db)
+    # Create Phase 1 indexes (sparse unique for new B2B/Vendor fields)
+    try:
+        from database import users_col
+        await users_col.create_index('id', unique=True, sparse=True)
+        await users_col.create_index('b2b_profile.gst_number', unique=True, sparse=True)
+        await users_col.create_index('vendor_profile.gstin', unique=True, sparse=True)
+        await users_col.create_index('vendor_profile.store_slug', unique=True, sparse=True)
+        await users_col.create_index('vendor_profile.vendor_id', unique=True, sparse=True)
+        await users_col.create_index('b2b_profile.approval_status')
+        await users_col.create_index('vendor_profile.approval_status')
+    except Exception as _e:
+        logging.warning(f"Phase 1 index creation warning: {_e}")
     logging.basicConfig(level=logging.INFO)
 
 @app.on_event("shutdown")
