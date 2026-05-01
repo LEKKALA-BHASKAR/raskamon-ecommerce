@@ -21,22 +21,22 @@
   },
   {
     "content": "[Phase 1C] Build B2B registration form page (company + GST + PAN + address + contact)",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "[Phase 1C] Build Vendor registration form page (business + bank + identity)",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "[Phase 1C] Build Admin approval UI: pending B2B users + vendors queues with approve/reject",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "[Phase 1C] Update frontend AuthContext to handle new roles & PENDING/REJECTED error states",
-    "status": "pending"
+    "status": "completed"
   },
   {
-    "content": "Comprehensive frontend+backend test via testing_agent after Phase 1 full slice",
-    "status": "pending"
+    "content": "Comprehensive frontend+backend test via testing_agent for Phase 1 slice",
+    "status": "in_progress"
   }
 ]

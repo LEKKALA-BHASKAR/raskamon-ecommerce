@@ -18,11 +18,14 @@ import AccountDashboard from '@/pages/account/AccountDashboard';
 // Auth Pages
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
+import RegisterB2B from '@/pages/auth/RegisterB2B';
+import RegisterVendor from '@/pages/auth/RegisterVendor';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 
 // Admin Pages
 import AdminLayout from '@/pages/admin/AdminLayout';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminApprovals from '@/pages/admin/AdminApprovals';
 import AdminProducts from '@/pages/admin/AdminProducts';
 import AdminProductForm from '@/pages/admin/AdminProductForm';
 import AdminOrders from '@/pages/admin/AdminOrders';
@@ -59,6 +62,8 @@ function App() {
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/register/b2b" element={<RegisterB2B />} />
+            <Route path="/register/vendor" element={<RegisterVendor />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
             {/* Protected User Routes */}
@@ -70,6 +75,7 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="approvals" element={<AdminApprovals />} />
               <Route path="products" element={<AdminProducts />} />
               <Route path="products/new" element={<AdminProductForm />} />
               <Route path="products/edit/:id" element={<AdminProductForm />} />

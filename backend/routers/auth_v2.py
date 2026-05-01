@@ -555,21 +555,24 @@ async def login(credentials: LoginRequest, request: Request):
             }
         )
     
-    # Generate tokens
+    # Generate tokens (support legacy users without `id` by falling back to _id)
+    _uid = user.get('id') or user.get('_id')
+    _role = user.get('role') or 'B2C_CUSTOMER'
     access_token = create_access_token({
-        "user_id": user['id'],
+        "sub": _uid,  # Legacy compatibility (security.get_current_user reads 'sub')
+        "user_id": _uid,
         "email": user['email'],
-        "role": user['role'],
-        "b2b_status": user.get('b2b_profile', {}).get('approval_status') if user['role'] == 'B2B_BUYER' else None,
-        "vendor_id": user.get('vendor_profile', {}).get('vendor_id') if user['role'] == 'VENDOR' else None,
-        "vendor_status": user.get('vendor_profile', {}).get('approval_status') if user['role'] == 'VENDOR' else None
+        "role": _role,
+        "b2b_status": user.get('b2b_profile', {}).get('approval_status') if _role == 'B2B_BUYER' else None,
+        "vendor_id": user.get('vendor_profile', {}).get('vendor_id') if _role == 'VENDOR' else None,
+        "vendor_status": user.get('vendor_profile', {}).get('approval_status') if _role == 'VENDOR' else None
     })
     
-    refresh_token = create_refresh_token({"sub": user['id'], "user_id": user['id']})
+    refresh_token = create_refresh_token({"sub": _uid, "user_id": _uid})
     
     # Store refresh token
     await users_col.update_one(
-        {"id": user['id']},
+        {"email": user['email']},
         {
             "$push": {
                 "refresh_tokens": {
@@ -597,23 +600,23 @@ async def login(credentials: LoginRequest, request: Request):
     
     # Prepare response
     user_response = {
-        "id": user['id'],
+        "id": _uid,
         "email": user['email'],
         "name": user['name'],
         "phone": user.get('phone'),
-        "role": user['role'],
-        "is_active": user.get('is_active', True),
-        "is_verified": user.get('is_verified', False),
-        "created_at": user['created_at'],
-        "last_login_at": user['last_login_at']
+        "role": _role,
+        "is_active": user.get('is_active', True) if user.get('is_active') is not None else (not user.get('isBlocked', False)),
+        "is_verified": user.get('is_verified', user.get('isVerified', False)),
+        "created_at": user.get('created_at') or user.get('createdAt'),
+        "last_login_at": user.get('last_login_at')
     }
     
     # Add role-specific fields
-    if user['role'] == 'B2B_BUYER':
+    if _role == 'B2B_BUYER':
         user_response['b2b_status'] = user.get('b2b_profile', {}).get('approval_status')
         user_response['company_name'] = user.get('b2b_profile', {}).get('company_name')
     
-    if user['role'] == 'VENDOR':
+    if _role == 'VENDOR':
         user_response['vendor_id'] = user.get('vendor_profile', {}).get('vendor_id')
         user_response['vendor_status'] = user.get('vendor_profile', {}).get('approval_status')
         user_response['store_name'] = user.get('vendor_profile', {}).get('store_name')
