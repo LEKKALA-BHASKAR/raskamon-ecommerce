@@ -48,7 +48,7 @@ const HeroBanner = ({ banners }) => {
                   transition={{ delay: 0.2, duration: 0.5 }}
                   className="max-w-xl"
                 >
-                  <p className="text-[var(--sattva-gold)] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Premium Ayurvedic Wellness</p>
+                  <p className="text-[#A3E635] text-xs font-semibold uppercase tracking-[0.2em] mb-3">Trusted Ayurveda-Backed Wellness</p>
                   <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight mb-4">
                     {banner.title}
                   </h1>
@@ -59,7 +59,7 @@ const HeroBanner = ({ banners }) => {
                     <Link to={banner.link || '/products'} data-testid="home-hero-primary-cta">
                       <motion.button
                         whileTap={{ scale: 0.97 }}
-                        className="px-6 py-3 bg-[var(--sattva-gold)] text-[var(--sattva-forest)] font-semibold text-sm rounded-lg hover:bg-[#b8985e] transition-colors flex items-center gap-2"
+                        className="px-6 py-3 bg-[#A3E635] text-[#1A3C34] font-semibold text-sm rounded-lg hover:bg-[#84CC16] transition-colors flex items-center gap-2"
                       >
                         Shop Now <ArrowRight size={16} />
                       </motion.button>

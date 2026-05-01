@@ -36,11 +36,13 @@ const Register = () => {
       <div className="min-h-[calc(100vh-72px)] flex items-center justify-center py-12 px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-[var(--sattva-forest)] rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-[var(--sattva-gold)] font-bold text-lg">S</span>
-            </div>
+            <img 
+              src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" 
+              alt="Dr MediScie Logo" 
+              className="h-16 w-auto mx-auto mb-4"
+            />
             <h1 className="font-heading text-2xl font-semibold text-[var(--sattva-ink)]">Create your account</h1>
-            <p className="text-gray-500 text-sm mt-1">Join thousands who trust Sattva for their wellness rituals</p>
+            <p className="text-gray-500 text-sm mt-1">Join thousands who trust Dr MediScie for wellness</p>
           </div>
 
           <div className="card-sattva p-8">

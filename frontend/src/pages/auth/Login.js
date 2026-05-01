@@ -39,11 +39,13 @@ const Login = () => {
           className="w-full max-w-md"
         >
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-[var(--sattva-forest)] rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-[var(--sattva-gold)] font-bold text-lg">S</span>
-            </div>
+            <img 
+              src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" 
+              alt="Dr MediScie Logo" 
+              className="h-16 w-auto mx-auto mb-4"
+            />
             <h1 className="font-heading text-2xl font-semibold text-[var(--sattva-ink)]">Welcome back</h1>
-            <p className="text-gray-500 text-sm mt-1">Sign in to your Sattva account</p>
+            <p className="text-gray-500 text-sm mt-1">Sign in to your Dr MediScie account</p>
           </div>
 
           <div className="card-sattva p-8">

@@ -38,12 +38,14 @@ const AdminLayout = ({ children }) => {
         }`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2 p-5 border-b border-[color:var(--sattva-border)]">
-          <div className="w-8 h-8 bg-[var(--sattva-forest)] rounded-full flex items-center justify-center">
-            <span className="text-[var(--sattva-gold)] text-xs font-bold">S</span>
-          </div>
+        <div className="flex items-center gap-3 p-5 border-b border-[color:var(--sattva-border)]">
+          <img 
+            src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" 
+            alt="Dr MediScie Logo" 
+            className="h-10 w-auto"
+          />
           <div>
-            <p className="font-heading text-sm font-semibold text-[var(--sattva-ink)]">Sattva Admin</p>
+            <p className="font-heading text-sm font-semibold text-[#2DD4BF]">Dr MediScie</p>
             <p className="text-[10px] text-gray-400 capitalize">{user?.role}</p>
           </div>
         </div>

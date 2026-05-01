@@ -47,12 +47,12 @@ const Header = () => {
         transition={{ duration: 0.2 }}
       >
         {/* Top utility bar */}
-        <div className="hidden md:flex items-center justify-center bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-xs py-1.5 px-4 gap-6">
+        <div className="hidden md:flex items-center justify-center bg-[#2DD4BF] text-white text-xs py-1.5 px-4 gap-6">
           <span>🌿 Free shipping on orders ₹499+</span>
           <span>•</span>
-          <span>100% Natural & Cruelty-Free</span>
+          <span>Trusted Ayurveda-Backed Wellness</span>
           <span>•</span>
-          <span>Use code SATTVA10 for 10% off</span>
+          <span>Science-backed holistic health</span>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
@@ -60,12 +60,17 @@ const Header = () => {
           <Link to="/" className="flex-shrink-0">
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
             >
-              <div className="w-8 h-8 bg-[var(--sattva-forest)] rounded-full flex items-center justify-center">
-                <span className="text-[var(--sattva-gold)] text-xs font-bold">S</span>
+              <img 
+                src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" 
+                alt="Dr MediScie Logo" 
+                className="h-10 w-auto"
+              />
+              <div className="flex flex-col">
+                <span className="font-heading text-xl font-bold text-[#2DD4BF] tracking-tight">Dr MediScie</span>
+                <span className="text-[8px] text-gray-500 -mt-1">Ayurveda-Backed Wellness</span>
               </div>
-              <span className="font-heading text-xl font-semibold text-[var(--sattva-forest)] tracking-tight">Sattva</span>
             </motion.div>
           </Link>
 
