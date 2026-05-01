@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Clock, ArrowRight } from 'lucide-react';
 import api from '../../utils/api';
 
-const useDebounce = (fn, delay) => {
-  const timer = React.useRef(null);
+const debounce = (fn, delay) => {
+  let timer = null;
   return (...args) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => fn(...args), delay);
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
   };
 };
 
@@ -33,7 +33,7 @@ const SearchModal = ({ open, onClose }) => {
     }
   };
 
-  const debouncedSearch = React.useMemo(() => useDebounce(search, 300), [search]);
+  const debouncedSearch = React.useMemo(() => debounce(search, 300), [search]);
 
   const handleInput = (e) => {
     const val = e.target.value;
