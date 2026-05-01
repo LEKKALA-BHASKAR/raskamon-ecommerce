@@ -35,8 +35,13 @@ const AdminProducts = () => {
     try {
       await api.delete(`/admin/products/${id}`);
       toast.success('Product deleted');
-      fetchProducts();
-    } catch { toast.error('Failed to delete'); } finally { setDeleting(null); }
+      setProducts(prev => prev.filter(p => p.id !== id));
+      setTotal(t => t - 1);
+    } catch {
+      toast.error('Failed to delete');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (

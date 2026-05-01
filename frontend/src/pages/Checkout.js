@@ -89,7 +89,7 @@ const Checkout = () => {
             amount,
             currency: 'INR',
             order_id: razorpay_order_id,
-            name: 'Sattva',
+            name: 'Dr MediScie',
             description: `Order #${order.invoiceId}`,
             prefill: { name: user.name, email: user.email, contact: user.phone || '' },
             theme: { color: '#1A3C34' },

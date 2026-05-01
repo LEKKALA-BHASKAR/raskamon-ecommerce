@@ -5,6 +5,7 @@ import { Eye, EyeOff, AlertCircle, Clock } from 'lucide-react';
 import { useAuth, normalizeRole } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -57,11 +58,9 @@ const Login = () => {
           className="w-full max-w-md"
         >
           <div className="text-center mb-8">
-            <img
-              src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png"
-              alt="Dr MediScie Logo"
-              className="h-16 w-auto mx-auto mb-4"
-            />
+            <div className="flex justify-center mb-4">
+              <BrandLogo centered size="lg" />
+            </div>
             <h1 className="font-heading text-2xl font-semibold text-[var(--sattva-ink)]">Welcome back</h1>
             <p className="text-gray-500 text-sm mt-1">Sign in to your Dr MediScie account</p>
           </div>

@@ -45,7 +45,7 @@ const AdminCoupons = () => {
     if (!confirm('Delete this coupon?')) return;
     await api.delete(`/admin/coupons/${id}`);
     toast.success('Deleted');
-    fetchCoupons();
+    setCoupons(prev => prev.filter(c => c.id !== id));
   };
 
   return (

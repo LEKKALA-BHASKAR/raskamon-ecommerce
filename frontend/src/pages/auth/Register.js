@@ -5,6 +5,7 @@ import { Eye, EyeOff, User, Briefcase, Store, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 const RoleSwitcher = ({ active = 'b2c' }) => {
   const roles = [
@@ -75,11 +76,9 @@ const Register = () => {
       <div className="min-h-[calc(100vh-72px)] flex items-center justify-center py-12 px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xl">
           <div className="text-center mb-6">
-            <img
-              src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png"
-              alt="Dr MediScie Logo"
-              className="h-16 w-auto mx-auto mb-4"
-            />
+            <div className="flex justify-center mb-4">
+              <BrandLogo centered size="lg" />
+            </div>
             <h1 className="font-heading text-2xl font-semibold text-[var(--sattva-ink)]">Create your account</h1>
             <p className="text-gray-500 text-sm mt-1">Choose the type of account that fits you</p>
           </div>

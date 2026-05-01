@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingBag, User, Menu, X, Heart, ChevronDown } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 import CartDrawer from '../cart/CartDrawer';
 import SearchModal from '../ui/SearchModal';
+import BrandLogo from '../brand/BrandLogo';
 
 const navLinks = [
   { label: 'Skincare', href: '/products?category=Skincare' },
@@ -23,7 +23,6 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const { user, logout } = useAuth();
   const { itemCount, cartOpen, setCartOpen } = useCart();
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -43,11 +42,9 @@ const Header = () => {
         className={`sticky top-0 z-50 bg-[var(--sattva-cream)] transition-shadow duration-300 ${
           scrolled ? 'shadow-[var(--shadow-sm)] border-b border-[color:var(--sattva-border)]' : 'border-b border-[color:var(--sattva-border)]'
         }`}
-        animate={{ height: scrolled ? '60px' : '72px' }}
-        transition={{ duration: 0.2 }}
       >
         {/* Top utility bar */}
-        <div className="hidden md:flex items-center justify-center bg-[#2DD4BF] text-white text-xs py-1.5 px-4 gap-6">
+        <div className="hidden md:flex items-center justify-center bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-xs py-1.5 px-4 gap-6">
           <span>🌿 Free shipping on orders ₹499+</span>
           <span>•</span>
           <span>Trusted Ayurveda-Backed Wellness</span>
@@ -55,126 +52,115 @@ const Header = () => {
           <span>Science-backed holistic health</span>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex-shrink-0">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="flex items-center gap-3"
-            >
-              <img 
-                src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" 
-                alt="Dr MediScie Logo" 
-                className="h-10 w-auto"
-              />
-              <div className="flex flex-col">
-                <span className="font-heading text-xl font-bold text-[#2DD4BF] tracking-tight">Dr MediScie</span>
-                <span className="text-[8px] text-gray-500 -mt-1">Ayurveda-Backed Wellness</span>
-              </div>
-            </motion.div>
-          </Link>
+        <motion.div
+          animate={{ height: scrolled ? '68px' : '84px' }}
+          transition={{ duration: 0.2 }}
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        >
+          <div className="grid h-full grid-cols-[auto_1fr_auto] items-center gap-6 lg:gap-10">
+            {/* Logo */}
+            <Link to="/" className="flex-shrink-0">
+              <motion.div whileHover={{ scale: 1.01 }} className="flex items-center">
+                <BrandLogo size={scrolled ? 'sm' : 'md'} />
+              </motion.div>
+            </Link>
 
-          {/* Desktop Nav - Moved 20% higher */}
-          <nav data-testid="header-navigation-menu" className="hidden lg:flex items-center gap-1" style={{ transform: 'translateY(-20%)' }}>
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                to={link.href}
-                className="relative px-3 py-2 text-sm font-medium text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] transition-colors group"
-              >
-                {link.label}
-                <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--sattva-gold)] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-              </Link>
-            ))}
-          </nav>
-
-          {/* Right Actions */}
-          <div className="flex items-center gap-1">
-            {/* Search */}
-            <motion.button
-              data-testid="header-search-button"
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSearchOpen(true)}
-              className="p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-              aria-label="Search"
-            >
-              <Search size={20} />
-            </motion.button>
-
-            {/* Wishlist - Fixed to navigate to account page */}
-            {user && (
-              <Link to="/account">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  className="hidden sm:flex p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-                  aria-label="Wishlist"
+            {/* Desktop Nav */}
+            <nav data-testid="header-navigation-menu" className="hidden lg:flex items-center justify-center gap-1 self-center">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className="relative px-3 py-2 text-sm font-medium text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] transition-colors group"
                 >
-                  <Heart size={20} />
-                </motion.button>
-              </Link>
-            )}
+                  {link.label}
+                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[var(--sattva-gold)] scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                </Link>
+              ))}
+            </nav>
 
-            {/* Account */}
-            <div className="relative group">
+            {/* Right Actions */}
+            <div className="flex items-center justify-end gap-1">
               <motion.button
-                data-testid="header-account-button"
+                data-testid="header-search-button"
                 whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)] flex items-center gap-1"
-                aria-label="Account"
+                onClick={() => setSearchOpen(true)}
+                className="p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                aria-label="Search"
               >
-                <User size={20} />
-                {user && <span className="hidden sm:block text-xs font-medium max-w-[80px] truncate">{user.name?.split(' ')[0]}</span>}
+                <Search size={20} />
               </motion.button>
-              {/* Dropdown */}
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-xl shadow-[var(--shadow-md)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                {user ? (
-                  <div className="py-2">
-                    <div className="px-4 py-2 border-b border-[color:var(--sattva-border)]">
-                      <p className="text-sm font-semibold text-[var(--sattva-ink)] truncate">{user.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    </div>
-                    <Link to="/account" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">My Account</Link>
-                    <Link to="/account/orders" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">My Orders</Link>
-                    {(user.role === 'admin' || user.role === 'manager') && (
-                      <Link to="/admin" className="block px-4 py-2 text-sm text-[var(--sattva-forest)] font-medium hover:bg-[var(--sattva-muted)] transition-colors">Admin Panel</Link>
-                    )}
-                    <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">Logout</button>
-                  </div>
-                ) : (
-                  <div className="py-2">
-                    <Link to="/login" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">Login</Link>
-                    <Link to="/register" className="block px-4 py-2 text-sm font-medium text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] transition-colors">Create Account</Link>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Cart */}
-            <motion.button
-              data-testid="header-cart-button"
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setCartOpen(true)}
-              className="relative p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-              aria-label="Cart"
-            >
-              <ShoppingBag size={20} />
-              {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {itemCount > 9 ? '9+' : itemCount}
-                </span>
+              {user && (
+                <Link to="/account">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    className="hidden sm:flex p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                    aria-label="Wishlist"
+                  >
+                    <Heart size={20} />
+                  </motion.button>
+                </Link>
               )}
-            </motion.button>
 
-            {/* Mobile menu */}
-            <button
-              className="lg:hidden p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors ml-1"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+              <div className="relative group">
+                <motion.button
+                  data-testid="header-account-button"
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)] flex items-center gap-1"
+                  aria-label="Account"
+                >
+                  <User size={20} />
+                  {user && <span className="hidden sm:block text-xs font-medium max-w-[80px] truncate">{user.name?.split(' ')[0]}</span>}
+                </motion.button>
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-xl shadow-[var(--shadow-md)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  {user ? (
+                    <div className="py-2">
+                      <div className="px-4 py-2 border-b border-[color:var(--sattva-border)]">
+                        <p className="text-sm font-semibold text-[var(--sattva-ink)] truncate">{user.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      </div>
+                      <Link to="/account" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">My Account</Link>
+                      <Link to="/account/orders" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">My Orders</Link>
+                      {(user.role === 'admin' || user.role === 'manager') && (
+                        <Link to="/admin" className="block px-4 py-2 text-sm text-[var(--sattva-forest)] font-medium hover:bg-[var(--sattva-muted)] transition-colors">Admin Panel</Link>
+                      )}
+                      <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">Logout</button>
+                    </div>
+                  ) : (
+                    <div className="py-2">
+                      <Link to="/login" className="block px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">Login</Link>
+                      <Link to="/register" className="block px-4 py-2 text-sm font-medium text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] transition-colors">Create Account</Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <motion.button
+                data-testid="header-cart-button"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCartOpen(true)}
+                className="relative p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                aria-label="Cart"
+              >
+                <ShoppingBag size={20} />
+                {itemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {itemCount > 9 ? '9+' : itemCount}
+                  </span>
+                )}
+              </motion.button>
+
+              <button
+                className="lg:hidden p-2 rounded-lg hover:bg-[var(--sattva-muted)] transition-colors ml-1"
+                onClick={() => setMobileOpen(!mobileOpen)}
+                aria-label="Menu"
+              >
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Mobile Menu */}
         <AnimatePresence>

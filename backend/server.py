@@ -15,7 +15,7 @@ from database import create_indexes, db as _mongo_db
 from utils.audit import init_audit_logger
 
 app = FastAPI(
-    title="Sattva API",
+    title="Dr MediScie API",
     description="Premium Indian Wellness E-commerce API",
     version="1.0.0",
     redirect_slashes=False
@@ -77,7 +77,7 @@ app.include_router(admin_users.router, prefix="/api/admin_users", tags=["admin_u
 
 @app.get("/api")
 async def root():
-    return {"message": "Sattva API v1.0.0", "status": "running"}
+    return {"message": "Dr MediScie API v1.0.0", "status": "running"}
 
 @app.on_event("startup")
 async def startup():

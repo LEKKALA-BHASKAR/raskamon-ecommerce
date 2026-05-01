@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 
 const AdminSettings = () => {
   const [form, setForm] = useState({
-    storeName: 'Sattva',
+    storeName: 'Dr MediScie',
     storeEmail: 'hello@sattva.in',
     storePhone: '+91 98765 43210',
     gstNumber: '27AABCS1429B1Z',

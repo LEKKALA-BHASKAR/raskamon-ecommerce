@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Image, MessageSquare, BarChart2, FileText, Settings, LogOut, Menu, ChevronRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -37,15 +38,8 @@ const AdminLayout = () => {
         }`}
       >
         <div className="flex items-center gap-3 p-5 border-b border-[color:var(--sattva-border)]">
-          <img
-            src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png"
-            alt="Dr MediScie Logo"
-            className="h-10 w-auto"
-          />
-          <div>
-            <p className="font-heading text-sm font-semibold text-[#2DD4BF]">Dr MediScie</p>
-            <p className="text-[10px] text-gray-400 capitalize">{user?.role}</p>
-          </div>
+          <BrandLogo size="sm" showSubtitle={false} />
+          <p className="text-[10px] text-gray-400 capitalize">{user?.role}</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3">

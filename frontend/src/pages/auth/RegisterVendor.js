@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
 import { RoleSwitcher } from './Register';
+import BrandLogo from '../../components/brand/BrandLogo';
 
 const SectionHeader = ({ icon: Icon, title, subtitle }) => (
   <div className="flex items-start gap-3 mb-4">
@@ -145,7 +146,9 @@ const RegisterVendor = () => {
       <div className="min-h-[calc(100vh-72px)] flex items-center justify-center py-12 px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-3xl">
           <div className="text-center mb-6">
-            <img src="https://customer-assets.emergentagent.com/job_ecom-dashboard-pro-1/artifacts/hnj1kpk1_image.png" alt="Dr MediScie" className="h-14 w-auto mx-auto mb-3" />
+            <div className="flex justify-center mb-3">
+              <BrandLogo centered size="lg" />
+            </div>
             <h1 className="font-heading text-2xl font-semibold text-[var(--sattva-ink)]">Become a Vendor</h1>
             <p className="text-sm text-gray-500 mt-1">Sell on Dr MediScie — reach approved B2B buyers across India. Approval in 2–5 business days.</p>
           </div>

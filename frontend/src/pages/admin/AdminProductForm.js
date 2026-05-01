@@ -94,8 +94,8 @@ const AdminProductForm = () => {
   if (loading) return <><div className="space-y-4">{[1,2,3].map(i=><div key={i} className="h-12 skeleton rounded-xl"/>)}</div></>;
 
   return (
-    <>
-      <div className="max-w-3xl">
+    <div className="flex flex-col lg:flex-row gap-8">
+      <div className="max-w-3xl w-full">
         <h2 className="font-heading text-xl font-semibold mb-6">{isNew ? 'Add New Product' : 'Edit Product'}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -196,7 +196,39 @@ const AdminProductForm = () => {
           </div>
         </form>
       </div>
-    </>
+      {/* Product Preview Panel */}
+      <div className="w-full lg:max-w-sm bg-white rounded-xl shadow p-6 h-fit sticky top-6">
+        <h3 className="font-semibold text-lg mb-4">Product Preview</h3>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-40 h-40 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+            {form.images && form.images.length > 0 ? (
+              <img src={form.images[0]} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-400">No Image</span>
+            )}
+          </div>
+          <div className="w-full text-center">
+            <p className="font-bold text-lg line-clamp-1">{form.name || <span className='text-gray-400'>Product Name</span>}</p>
+            <p className="text-sm text-gray-500 mb-1">{form.brand || <span className='text-gray-300'>Brand</span>}</p>
+            <p className="text-xs text-gray-400 mb-2">{form.category || <span className='text-gray-200'>Category</span>}</p>
+            <div className="flex justify-center items-baseline gap-2 mb-2">
+              {form.discountPrice ? (
+                <span className="text-xl font-semibold text-green-700">₹{form.discountPrice}</span>
+              ) : (
+                <span className="text-xl font-semibold text-gray-400">₹0</span>
+              )}
+              {form.price && form.price > form.discountPrice ? (
+                <span className="text-sm line-through text-gray-400">₹{form.price}</span>
+              ) : null}
+            </div>
+            <span className={`text-xs font-medium ${form.stock === '0' ? 'text-red-500' : form.stock <= 10 ? 'text-orange-500' : 'text-green-600'}`}>
+              Stock: {form.stock || 0}
+            </span>
+            <div className="mt-2 text-xs text-gray-500 line-clamp-2 min-h-[2em]">{form.description || <span className='text-gray-300'>Description...</span>}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

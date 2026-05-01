@@ -40,7 +40,7 @@ IMG = [
 
 BANNER_IMGS = [
     'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=1400&q=85',
-    'https://images.unsplash.com/photo-1614930118543-1e82e0f2b82d?w=1400&q=85',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrW0RydMNwuABhB2JCQqPrEDXPS9JgMn8vYA&s',
     'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=1400&q=85',
 ]
 

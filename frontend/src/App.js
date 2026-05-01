@@ -12,7 +12,7 @@ import Checkout from '@/pages/Checkout';
 import OrderSuccess from '@/pages/OrderSuccess';
 import SearchResults from '@/pages/SearchResults';
 import { Blog, BlogPost } from '@/pages/Blog';
-import { About, Contact, Privacy, Terms, Shipping } from '@/pages/StaticPages';
+import { About, Contact, FAQ, Privacy, Terms, Shipping } from '@/pages/StaticPages';
 import AccountDashboard from '@/pages/account/AccountDashboard';
 
 // Auth Pages
@@ -54,6 +54,7 @@ function App() {
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<FAQ />} />
             <Route path="/shipping" element={<Shipping />} />
             <Route path="/returns" element={<Shipping />} />
             <Route path="/terms" element={<Terms />} />

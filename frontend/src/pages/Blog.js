@@ -16,7 +16,7 @@ export const Blog = () => {
       <div className="container-sattva py-12">
         <div className="text-center mb-10">
           <p className="text-[var(--sattva-gold)] text-xs font-semibold uppercase tracking-widest mb-2">Wisdom & Rituals</p>
-          <h1 className="font-heading text-3xl font-semibold text-[var(--sattva-ink)]">The Sattva Journal</h1>
+          <h1 className="font-heading text-3xl font-semibold text-[var(--sattva-ink)]">The Dr MediScie Journal</h1>
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

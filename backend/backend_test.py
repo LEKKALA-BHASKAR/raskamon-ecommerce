@@ -10,7 +10,7 @@ from datetime import datetime
 import uuid
 
 class Phase1APITester:
-    def __init__(self, base_url="https://ecom-dashboard-pro-1.preview.emergentagent.com/api"):
+    def __init__(self, base_url="http://127.0.0.1:8000/api"):
         self.base_url = base_url
         self.admin_token = None
         self.tests_run = 0

@@ -199,7 +199,7 @@ const ProductSection = ({ title, subtitle, products, link }) => {
 // Testimonials
 const testimonials = [
   { name: 'Priya Sharma', city: 'Mumbai', rating: 5, text: 'The Kumkumadi Serum has transformed my skin completely. After 4 weeks of use, my dark spots are visibly lighter and skin has a natural glow!' },
-  { name: 'Ananya Gupta', city: 'Bengaluru', rating: 5, text: 'I switched to Sattva\'s hair oil 3 months ago and the difference is remarkable. Minimal hair fall and so much more volume. Truly Ayurvedic magic!' },
+  { name: 'Ananya Gupta', city: 'Bengaluru', rating: 5, text: 'I switched to Dr MediScie hair oil 3 months ago and the difference is remarkable. Minimal hair fall and so much more volume. Truly Ayurvedic magic!' },
   { name: 'Rohit Patel', city: 'Ahmedabad', rating: 5, text: 'The Ashwagandha supplement has genuinely helped with my stress levels. Sleep has improved drastically. Quality is unmatched at this price.' },
 ];
 
