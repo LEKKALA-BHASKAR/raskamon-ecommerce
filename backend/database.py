@@ -24,6 +24,12 @@ banners_col = db['banners']
 blog_col = db['blog_posts']
 notifications_col = db['notifications']
 audit_logs_col = db['audit_logs']
+vendor_ledger_col = db['vendor_ledger']
+payouts_col = db['payouts']
+gst_invoices_col = db['gst_invoices']
+site_content_col = db['site_content']
+testimonials_col = db['testimonials']
+social_videos_col = db['social_videos']
 
 
 async def create_indexes():
@@ -40,3 +46,11 @@ async def create_indexes():
     await reviews_col.create_index([('product', 1), ('user', 1)])
     await coupons_col.create_index('code', unique=True)
     await blog_col.create_index('slug', unique=True)
+    await vendor_ledger_col.create_index('vendor_id')
+    await vendor_ledger_col.create_index('created_at')
+    await payouts_col.create_index('vendor_id')
+    await payouts_col.create_index('status')
+    await gst_invoices_col.create_index('order_id', unique=True)
+    await site_content_col.create_index('key', unique=True)
+    await testimonials_col.create_index('order')
+    await social_videos_col.create_index('order')

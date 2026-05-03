@@ -135,7 +135,7 @@ const Login = () => {
                 ) : 'Sign In'}
               </button>
 
-              <p className="text-xs text-center text-gray-400">Admin: admin@sattva.in / admin@1234</p>
+              {/* Admin credentials removed for security */}
             </form>
           </div>
 

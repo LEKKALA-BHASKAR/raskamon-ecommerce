@@ -654,3 +654,218 @@ async def get_audit_logs(
             "pages": result['pages']
         }
     }
+
+
+# ==================== SUSPEND / REACTIVATE ====================
+
+@router.post('/vendors/{vendor_id}/suspend')
+@require_role(["ADMIN"])
+async def suspend_vendor(
+    vendor_id: str,
+    request: Request,
+    reason: str = "Policy violation",
+    admin_user: dict = Depends(get_current_user)
+):
+    """Suspend an approved vendor. Their products become inactive."""
+    from database import products_col
+    vendor = await users_col.find_one({"vendor_profile.vendor_id": vendor_id})
+    if not vendor:
+        raise HTTPException(status_code=404, detail={"code": "VENDOR_NOT_FOUND", "message": "Vendor not found"})
+
+    await users_col.update_one(
+        {"vendor_profile.vendor_id": vendor_id},
+        {"$set": {"vendor_profile.approval_status": "SUSPENDED", "vendor_profile.suspension_reason": reason, "updated_at": datetime.utcnow()}}
+    )
+    # Deactivate all their products
+    await products_col.update_many({"vendor_id": vendor_id}, {"$set": {"isActive": False, "updatedAt": datetime.utcnow()}})
+
+    audit_logger = get_audit_logger()
+    await audit_logger.log_action(
+        user_id=admin_user.get('id'), user_email=admin_user.get('email'), user_role='ADMIN',
+        action="VENDOR_SUSPENDED", entity_type="VENDOR", entity_id=vendor_id,
+        entity_name=vendor.get('vendor_profile', {}).get('store_name'),
+        changes={"reason": reason}, description=f"Vendor suspended: {reason}",
+        severity="HIGH", category="VENDOR_MANAGEMENT", user_ip=request.client.host if request else None
+    )
+    return {"success": True, "message": "Vendor suspended and all products deactivated"}
+
+
+@router.post('/vendors/{vendor_id}/reactivate')
+@require_role(["ADMIN"])
+async def reactivate_vendor(
+    vendor_id: str,
+    request: Request,
+    admin_user: dict = Depends(get_current_user)
+):
+    """Reactivate a suspended vendor."""
+    from database import products_col
+    vendor = await users_col.find_one({"vendor_profile.vendor_id": vendor_id})
+    if not vendor:
+        raise HTTPException(status_code=404, detail={"code": "VENDOR_NOT_FOUND", "message": "Vendor not found"})
+
+    await users_col.update_one(
+        {"vendor_profile.vendor_id": vendor_id},
+        {"$set": {"vendor_profile.approval_status": "APPROVED", "vendor_profile.suspension_reason": None, "updated_at": datetime.utcnow()}}
+    )
+    # Re-activate only approved products
+    await products_col.update_many(
+        {"vendor_id": vendor_id, "approval_status": "APPROVED"},
+        {"$set": {"isActive": True, "updatedAt": datetime.utcnow()}}
+    )
+    return {"success": True, "message": "Vendor reactivated"}
+
+
+@router.post('/b2b-users/{user_id}/suspend')
+@require_role(["ADMIN"])
+async def suspend_b2b_user(
+    user_id: str,
+    request: Request,
+    reason: str = "Policy violation",
+    admin_user: dict = Depends(get_current_user)
+):
+    """Suspend a B2B buyer account."""
+    b2b_user = await users_col.find_one({"id": user_id, "role": "B2B_BUYER"})
+    if not b2b_user:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "B2B user not found"})
+
+    await users_col.update_one(
+        {"id": user_id},
+        {"$set": {"b2b_profile.approval_status": "SUSPENDED", "b2b_profile.suspension_reason": reason, "updated_at": datetime.utcnow()}}
+    )
+    return {"success": True, "message": "B2B user suspended"}
+
+
+@router.post('/b2b-users/{user_id}/reactivate')
+@require_role(["ADMIN"])
+async def reactivate_b2b_user(
+    user_id: str,
+    request: Request,
+    admin_user: dict = Depends(get_current_user)
+):
+    """Reactivate a suspended B2B buyer."""
+    b2b_user = await users_col.find_one({"id": user_id, "role": "B2B_BUYER"})
+    if not b2b_user:
+        raise HTTPException(status_code=404, detail={"code": "USER_NOT_FOUND", "message": "B2B user not found"})
+
+    await users_col.update_one(
+        {"id": user_id},
+        {"$set": {"b2b_profile.approval_status": "APPROVED", "b2b_profile.suspension_reason": None, "updated_at": datetime.utcnow()}}
+    )
+    return {"success": True, "message": "B2B user reactivated"}
+
+
+# ==================== PRODUCT MODERATION (ADMIN) ====================
+
+@router.get('/vendor-products')
+@require_role(["ADMIN", "SUB_ADMIN"])
+async def admin_list_vendor_products(
+    approval_status: Optional[str] = None,
+    vendor_id: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    admin_user: dict = Depends(get_current_user)
+):
+    """Admin: list all vendor products for moderation."""
+    from database import products_col
+    from utils.helpers import serialize_doc, paginate
+
+    query = {"is_vendor_product": True, "isDeleted": {"$ne": True}}
+    if approval_status:
+        query["approval_status"] = approval_status
+    if vendor_id:
+        query["vendor_id"] = vendor_id
+
+    skip, lim = paginate(page, limit)
+    total = await products_col.count_documents(query)
+    products = await products_col.find(query).sort("createdAt", -1).skip(skip).limit(lim).to_list(lim)
+
+    return {
+        "success": True,
+        "data": serialize_doc(products),
+        "pagination": {"page": page, "limit": limit, "total": total, "pages": (total + lim - 1) // lim}
+    }
+
+
+@router.post('/vendor-products/{product_id}/approve')
+@require_role(["ADMIN", "SUB_ADMIN"])
+async def admin_approve_product(
+    product_id: str,
+    request: Request,
+    admin_user: dict = Depends(get_current_user)
+):
+    """Admin: approve a vendor product."""
+    from database import products_col
+    product = await products_col.find_one({"id": product_id, "is_vendor_product": True})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    await products_col.update_one(
+        {"id": product_id},
+        {"$set": {"approval_status": "APPROVED", "isActive": True, "approved_by": admin_user.get('id'), "approved_at": datetime.utcnow(), "rejection_reason": None, "updatedAt": datetime.utcnow()}}
+    )
+    return {"success": True, "message": "Product approved and live in B2B catalog"}
+
+
+@router.post('/vendor-products/{product_id}/reject')
+@require_role(["ADMIN", "SUB_ADMIN"])
+async def admin_reject_product(
+    product_id: str,
+    rejection_reason: str,
+    request: Request,
+    admin_user: dict = Depends(get_current_user)
+):
+    """Admin: reject a vendor product."""
+    from database import products_col
+    product = await products_col.find_one({"id": product_id, "is_vendor_product": True})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    await products_col.update_one(
+        {"id": product_id},
+        {"$set": {"approval_status": "REJECTED", "isActive": False, "rejection_reason": rejection_reason, "updatedAt": datetime.utcnow()}}
+    )
+    return {"success": True, "message": "Product rejected"}
+
+
+# ==================== ADMIN FINANCIAL OVERVIEW ====================
+
+@router.get('/financial-overview')
+@require_role(["ADMIN"])
+async def admin_financial_overview(admin_user: dict = Depends(get_current_user)):
+    """Admin: GMV, commission earned, total vendor payables."""
+    from database import orders_col, vendor_ledger_col
+
+    # GMV from all orders
+    gmv_pipeline = [
+        {"$match": {"status": {"$ne": "CANCELLED"}}},
+        {"$group": {"_id": None, "gmv": {"$sum": "$total"}, "order_count": {"$sum": 1}}}
+    ]
+    gmv_data = await orders_col.aggregate(gmv_pipeline).to_list(1)
+    gmv = gmv_data[0] if gmv_data else {"gmv": 0, "order_count": 0}
+
+    # Vendor ledger totals (platform commission = gross - net across all vendors)
+    ledger_pipeline = [
+        {"$group": {
+            "_id": None,
+            "total_gross": {"$sum": "$gross_amount"},
+            "total_net": {"$sum": {"$cond": [{"$eq": ["$type", "CREDIT"]}, "$net_amount", 0]}},
+            "total_commission": {"$sum": "$commission_amount"},
+            "total_paid_out": {"$sum": {"$cond": [{"$eq": ["$type", "DEBIT"]}, "$amount", 0]}}
+        }}
+    ]
+    ledger_data = await vendor_ledger_col.aggregate(ledger_pipeline).to_list(1)
+    ledger = ledger_data[0] if ledger_data else {}
+
+    total_earned = ledger.get("total_net", 0)
+    total_paid = ledger.get("total_paid_out", 0)
+    total_payable = total_earned - total_paid
+
+    return {
+        "success": True,
+        "data": {
+            "gmv": round(gmv.get("gmv", 0), 2),
+            "total_orders": gmv.get("order_count", 0),
+            "platform_commission": round(ledger.get("total_commission", 0), 2),
+            "vendor_total_earned": round(total_earned, 2),
+            "vendor_total_paid": round(total_paid, 2),
+            "vendor_total_payable": round(total_payable, 2)
+        }
+    }

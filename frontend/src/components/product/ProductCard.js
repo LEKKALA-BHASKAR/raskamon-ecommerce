@@ -1,145 +1,204 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Star, Heart, ShoppingBag, Eye } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, Heart, ShoppingBag } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../utils/api';
 import { toast } from 'sonner';
 
-const StarRating = ({ rating, size = 12 }) => (
-  <div className="flex items-center gap-0.5">
-    {[1,2,3,4,5].map(i => (
-      <Star
-        key={i}
-        size={size}
-        className={i <= Math.round(rating) ? 'star-filled fill-current' : 'star-empty'}
-      />
-    ))}
+export const StarRating = ({ rating, size = 11, showCount, count }) => (
+  <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star
+          key={i}
+          size={size}
+          className={i <= Math.round(rating) ? 'text-[var(--sattva-gold)]' : 'text-[var(--sattva-border)]'}
+          strokeWidth={0}
+          fill={i <= Math.round(rating) ? 'var(--sattva-gold)' : 'var(--sattva-border)'}
+        />
+      ))}
+    </div>
+    {showCount && count > 0 && (
+      <span className="text-[10px] text-gray-400 font-medium ml-0.5">({count})</span>
+    )}
   </div>
 );
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const [wishlisted, setWishlisted] = React.useState(false);
-  const [imgLoaded, setImgLoaded] = React.useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  const price = product.discountPrice || product.price;
+  const originalPrice = product.mrp || product.price;
+  const discount = originalPrice > price
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
 
   const handleWishlist = async (e) => {
     e.preventDefault();
-    if (!user) { toast.error('Please login to save to wishlist'); return; }
+    e.stopPropagation();
+    if (!user) { toast.error('Please sign in to save items'); return; }
+    const newState = !wishlisted;
+    setWishlisted(newState);
     try {
-      if (wishlisted) {
-        await api.delete(`/users/me/wishlist/${product.id}`);
-        setWishlisted(false);
-        toast.success('Removed from wishlist');
+      if (newState) {
+        await api.post(`/users/me/wishlist/${product.id || product._id}`);
+        toast.success('Saved to wishlist ♥');
       } else {
-        await api.post(`/users/me/wishlist/${product.id}`);
-        setWishlisted(true);
-        toast.success('Added to wishlist');
+        await api.delete(`/users/me/wishlist/${product.id || product._id}`);
+        toast.success('Removed from wishlist');
       }
     } catch {
-      toast.error('Failed to update wishlist');
+      setWishlisted(!newState);
     }
   };
 
-  const handleQuickAdd = (e) => {
+  const handleQuickAdd = async (e) => {
     e.preventDefault();
-    addToCart(product.id, 1);
+    e.stopPropagation();
+    if (product.stock === 0) return;
+    setAdding(true);
+    try {
+      addToCart(product.id || product._id, 1);
+      toast.success(`Added to cart`);
+    } catch {
+      toast.error('Failed to add to cart');
+    } finally {
+      setTimeout(() => setAdding(false), 800);
+    }
   };
-
-  const discount = product.price > product.discountPrice
-    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
-    : 0;
 
   return (
     <motion.div
       data-testid="product-card"
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.2 }}
-      className="group card-sattva overflow-hidden"
+      className="product-card group"
+      onHoverStart={() => setHovering(true)}
+      onHoverEnd={() => setHovering(false)}
     >
       <Link to={`/products/${product.slug}`} className="block">
         {/* Image */}
-        <div className="relative aspect-square overflow-hidden bg-[var(--sattva-muted)]">
+        <div className="relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
           {!imgLoaded && <div className="absolute inset-0 skeleton" />}
+
           <img
-            src={product.images?.[0] || 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=400&q=80'}
+            src={product.images?.[0] || 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=500&q=80'}
             alt={product.name}
-            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover transition-transform duration-700 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            style={{ transform: hovering ? 'scale(1.07)' : 'scale(1)' }}
             onLoad={() => setImgLoaded(true)}
             loading="lazy"
           />
 
+          {/* Hover gradient */}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-[rgba(15,36,32,0.4)] via-transparent to-transparent transition-opacity duration-300"
+            style={{ opacity: hovering ? 1 : 0 }}
+          />
+
           {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.isFeatured && (
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-[var(--sattva-gold)] text-[var(--sattva-forest)]">Bestseller</span>
-            )}
-            {discount >= 10 && (
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-[var(--sattva-forest)] text-[var(--sattva-cream)]">{discount}% off</span>
-            )}
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+            {product.isFeatured && <span className="badge-bestseller">Bestseller</span>}
+            {discount >= 10 && <span className="badge-off">{discount}% off</span>}
           </div>
 
           {/* Wishlist */}
           <button
             data-testid="product-card-wishlist-button"
             onClick={handleWishlist}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[var(--sattva-surface)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-            aria-label="Add to wishlist"
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all duration-200"
+            style={{ opacity: hovering ? 1 : 0, transform: hovering ? 'scale(1)' : 'scale(0.8)' }}
+            aria-label="Wishlist"
           >
             <Heart
-              size={14}
-              className={wishlisted ? 'fill-red-500 text-red-500' : 'text-[var(--sattva-forest)]'}
+              size={15}
+              strokeWidth={2}
+              className={wishlisted ? 'fill-red-500 text-red-500' : 'text-[var(--sattva-ink)]'}
             />
           </button>
 
-          {/* Quick actions overlay */}
-          <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-            <button
-              data-testid="product-card-quick-add-button"
-              onClick={handleQuickAdd}
-              className="w-full py-2.5 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-xs font-semibold flex items-center justify-center gap-2 hover:bg-[#152f28] transition-colors"
-            >
-              <ShoppingBag size={13} />
-              Add to Cart
-            </button>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="p-3">
-          <p className="text-xs text-[var(--sattva-gold)] font-medium uppercase tracking-wider mb-1">{product.brand}</p>
-          <h3 className="font-heading text-sm font-medium text-[var(--sattva-ink)] leading-snug line-clamp-2">{product.name}</h3>
-
-          {/* Rating */}
-          {product.rating > 0 && (
-            <div data-testid="product-card-rating" className="flex items-center gap-1.5 mt-1.5">
-              <StarRating rating={product.rating} />
-              <span className="text-[10px] text-gray-400">({product.reviewCount || 0})</span>
+          {/* Low stock */}
+          {product.stock > 0 && product.stock <= 5 && (
+            <div className="absolute bottom-14 left-0 right-0 mx-3">
+              <div className="bg-orange-500/90 text-white text-[9px] font-bold uppercase tracking-wide px-3 py-1 rounded-full text-center">
+                Only {product.stock} left
+              </div>
             </div>
           )}
 
-          {/* Price */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="price-tag font-bold text-[var(--sattva-forest)] text-sm">₹{product.discountPrice?.toLocaleString('en-IN')}</span>
-            {product.price > product.discountPrice && (
-              <span className="price-tag text-xs text-gray-400 line-through">₹{product.price?.toLocaleString('en-IN')}</span>
+          {/* Quick Add */}
+          <AnimatePresence>
+            {hovering && product.stock > 0 && (
+              <motion.button
+                initial={{ y: '100%', opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                onClick={handleQuickAdd}
+                data-testid="product-card-quick-add-button"
+                disabled={adding}
+                className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 py-3.5 font-semibold text-xs tracking-wide"
+                style={{
+                  background: adding ? 'rgba(31,107,87,1)' : 'rgba(26,60,52,0.96)',
+                  color: 'var(--sattva-cream)',
+                }}
+              >
+                <ShoppingBag size={13} strokeWidth={2.5} />
+                {adding ? 'Adding...' : 'Add to Cart'}
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* OOS overlay */}
+          {product.stock === 0 && (
+            <div className="absolute inset-0 bg-[var(--sattva-cream)]/55 flex items-center justify-center">
+              <span className="bg-white text-gray-500 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border border-gray-200">
+                Out of Stock
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-4">
+          {product.brand && (
+            <p className="eyebrow text-[var(--sattva-gold-deep)] mb-1.5">{product.brand}</p>
+          )}
+
+          <h3 className="font-heading-serif text-[0.875rem] font-semibold text-[var(--sattva-ink)] leading-snug line-clamp-2 mb-2 group-hover:text-[var(--sattva-forest)] transition-colors duration-200">
+            {product.name}
+          </h3>
+
+          {product.rating > 0 && (
+            <div className="mb-2.5" data-testid="product-card-rating">
+              <StarRating rating={product.rating} showCount count={product.reviewCount} />
+            </div>
+          )}
+
+          <div className="flex items-end justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="price-tag text-base font-black text-[var(--sattva-forest)]">
+                ₹{price?.toLocaleString('en-IN')}
+              </span>
+              {originalPrice > price && (
+                <span className="price-tag text-xs text-gray-400 line-through">
+                  ₹{originalPrice?.toLocaleString('en-IN')}
+                </span>
+              )}
+            </div>
+            {discount >= 10 && (
+              <span className="text-[10px] font-bold text-[var(--sattva-terracotta)]">Save {discount}%</span>
             )}
           </div>
-
-          {/* Stock */}
-          {product.stock <= 10 && product.stock > 0 && (
-            <p className="text-[10px] text-orange-600 font-medium mt-1">Only {product.stock} left</p>
-          )}
-          {product.stock === 0 && (
-            <p className="text-[10px] text-red-500 font-medium mt-1">Out of stock</p>
-          )}
         </div>
       </Link>
     </motion.div>
   );
 };
 
-export { StarRating };
 export default ProductCard;

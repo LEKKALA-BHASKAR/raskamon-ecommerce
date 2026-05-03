@@ -11,6 +11,8 @@ load_dotenv(ROOT_DIR / '.env')
 # Import routers
 from routers import auth, users, products, categories, cart, orders, reviews, payments, upload, coupons, admin
 from routers import auth_v2, admin_users
+from routers import vendor_products, b2b_catalog, vendor_analytics, vendor_ledger
+from routers import site_content
 from database import create_indexes, db as _mongo_db
 from utils.audit import init_audit_logger
 
@@ -74,6 +76,16 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 # They coexist with the legacy B2C auth (`/api/auth/*`) to enable incremental migration.
 app.include_router(auth_v2.router, prefix="/api/auth_v2", tags=["auth_v2"])
 app.include_router(admin_users.router, prefix="/api/admin_users", tags=["admin_users"])
+
+# ==================== B2B + VENDOR MARKETPLACE ====================
+app.include_router(vendor_products.router, prefix="/api/vendor/products", tags=["vendor_products"])
+app.include_router(b2b_catalog.router, prefix="/api/b2b", tags=["b2b_catalog"])
+app.include_router(vendor_analytics.router, prefix="/api/vendor/analytics", tags=["vendor_analytics"])
+app.include_router(vendor_ledger.router, prefix="/api/vendor/ledger", tags=["vendor_ledger"])
+
+# ==================== SITE CONTENT (hero, testimonials, flash sale, social videos, nav) ====================
+# Mixed prefix: exposes /api/site/* (public) and /api/admin/* (auth) from one router.
+app.include_router(site_content.router, prefix="/api", tags=["site_content"])
 
 @app.get("/api")
 async def root():

@@ -47,6 +47,16 @@ const AdminProductForm = () => {
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+    const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+    if (!ALLOWED.includes(file.type)) {
+      toast.error('Unsupported file type. Use JPG/PNG/WEBP/AVIF/GIF');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      toast.error('File too large. Max 5MB');
+      return;
+    }
     try {
       const sigRes = await api.get('/upload/signature');
       const { signature, timestamp, cloud_name, api_key, folder } = sigRes.data;
@@ -118,12 +128,28 @@ const AdminProductForm = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Category *</label>
-                <select value={form.category} onChange={(e) => handleChange('category', e.target.value)} required
+                <select value={form.category} onChange={(e) => { handleChange('category', e.target.value); handleChange('subcategory', ''); }} required
                   className="w-full px-3 py-2.5 text-sm border border-[color:var(--sattva-border)] rounded-xl bg-[var(--sattva-surface)] focus:outline-none">
                   <option value="">Select category</option>
                   {categories.filter(c=>!c.parent).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
+
+              {(() => {
+                const parentCat = categories.find(c => !c.parent && c.name === form.category);
+                const subs = parentCat ? categories.filter(c => c.parent === parentCat.id) : [];
+                if (!parentCat || subs.length === 0) return null;
+                return (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Sub-Category</label>
+                    <select value={form.subcategory || ''} onChange={(e) => handleChange('subcategory', e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-[color:var(--sattva-border)] rounded-xl bg-[var(--sattva-surface)] focus:outline-none">
+                      <option value="">— None —</option>
+                      {subs.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                    </select>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Tags (comma-separated)</label>
@@ -172,7 +198,7 @@ const AdminProductForm = () => {
               </button>
               <label className="px-4 py-2.5 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-sm font-medium rounded-xl cursor-pointer hover:bg-[#152f28] transition-colors flex items-center gap-2">
                 <Upload size={14} /> Upload
-                <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                <input type="file" accept="image/avif,image/*" onChange={handleUpload} className="hidden" />
               </label>
             </div>
             <div className="flex flex-wrap gap-3">

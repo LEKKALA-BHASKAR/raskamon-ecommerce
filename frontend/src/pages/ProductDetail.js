@@ -9,6 +9,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { MOCK_PRODUCTS } from '../utils/mockData';
 
 const StarRating = ({ rating, size = 16, interactive = false, onRate }) => (
   <div className="flex items-center gap-0.5">
@@ -56,7 +57,14 @@ const ProductDetail = () => {
         setRelated(relRes.data);
         setReviews(revRes.data.reviews || []);
       } catch {
-        navigate('/products');
+        // Try mock data
+        const mock = MOCK_PRODUCTS.find(p => p.slug === slug);
+        if (mock) {
+          setProduct(mock);
+          setRelated(MOCK_PRODUCTS.filter(p => p.slug !== slug).slice(0, 4));
+        } else {
+          navigate('/products');
+        }
       } finally {
         setLoading(false);
       }

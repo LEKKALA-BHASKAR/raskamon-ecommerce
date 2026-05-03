@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Image, MessageSquare, BarChart2, FileText, Settings, LogOut, Menu, ChevronRight, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Image, MessageSquare, BarChart2, FileText, Settings, LogOut, Menu, ChevronRight, ShieldCheck, Store, Wallet, Play, Sparkles, Compass } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import BrandLogo from '../../components/brand/BrandLogo';
 
@@ -8,11 +8,16 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
   { icon: ShieldCheck, label: 'Approvals', path: '/admin/approvals' },
   { icon: Package, label: 'Products', path: '/admin/products' },
+  { icon: Store, label: 'Vendor Products', path: '/admin/vendor-products' },
+  { icon: Wallet, label: 'Payouts', path: '/admin/payouts' },
   { icon: FolderTree, label: 'Categories', path: '/admin/categories' },
   { icon: ShoppingCart, label: 'Orders', path: '/admin/orders' },
   { icon: Users, label: 'Customers', path: '/admin/customers' },
   { icon: Tag, label: 'Coupons', path: '/admin/coupons' },
   { icon: Image, label: 'Banners', path: '/admin/banners' },
+  { icon: Sparkles, label: 'Home Content', path: '/admin/home-content' },
+  { icon: Compass, label: 'Navigation', path: '/admin/navigation' },
+  { icon: Play, label: 'Social Videos', path: '/admin/social-videos' },
   { icon: MessageSquare, label: 'Reviews', path: '/admin/reviews' },
   { icon: BarChart2, label: 'Analytics', path: '/admin/analytics' },
   { icon: FileText, label: 'Blog', path: '/admin/blog' },

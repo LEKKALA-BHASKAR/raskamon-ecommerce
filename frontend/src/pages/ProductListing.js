@@ -7,6 +7,7 @@ import Layout from '../components/layout/Layout';
 import ProductCard from '../components/product/ProductCard';
 import { Slider } from '../components/ui/slider';
 import { Checkbox } from '../components/ui/checkbox';
+import { MOCK_PRODUCTS, MOCK_CATEGORIES } from '../utils/mockData';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest' },
@@ -28,6 +29,7 @@ const ProductListing = () => {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const category = searchParams.get('category') || '';
+  const subcategory = searchParams.get('subcategory') || '';
   const sort = searchParams.get('sort') || 'newest';
   const page = parseInt(searchParams.get('page') || '1');
   const minPrice = parseInt(searchParams.get('min_price') || '0');
@@ -36,7 +38,7 @@ const ProductListing = () => {
   const ratingFilter = parseFloat(searchParams.get('min_rating') || '0');
 
   useEffect(() => {
-    api.get('/categories').then(r => setCategories(r.data)).catch(() => {});
+    api.get('/categories').then(r => { if (r.data?.length) setCategories(r.data); }).catch(() => setCategories(MOCK_CATEGORIES));
     api.get('/products/brands').then(r => setBrands(r.data)).catch(() => {});
   }, []);
 
@@ -47,23 +49,36 @@ const ProductListing = () => {
         const params = new URLSearchParams({
           page, limit: 12, sort,
           ...(category && { category }),
+          ...(subcategory && { subcategory }),
           ...(brandFilter && { brand: brandFilter }),
           ...(minPrice > 0 && { min_price: minPrice }),
           ...(maxPrice < 5000 && { max_price: maxPrice }),
           ...(ratingFilter > 0 && { min_rating: ratingFilter }),
         });
         const res = await api.get(`/products?${params}`);
-        setProducts(res.data.products);
-        setTotal(res.data.total);
-        setPages(res.data.pages);
-      } catch (err) {
-        console.error(err);
+        if (res.data.products?.length) {
+          setProducts(res.data.products);
+          setTotal(res.data.total);
+          setPages(res.data.pages);
+        } else {
+          throw new Error('empty');
+        }
+      } catch {
+        // Use mock data filtered by params
+        let filtered = MOCK_PRODUCTS;
+        if (category) filtered = filtered.filter(p => p.category === category);
+        if (subcategory) filtered = filtered.filter(p => p.subcategory === subcategory);
+        if (brandFilter) filtered = filtered.filter(p => p.brand === brandFilter);
+        if (ratingFilter > 0) filtered = filtered.filter(p => p.rating >= ratingFilter);
+        setProducts(filtered);
+        setTotal(filtered.length);
+        setPages(1);
       } finally {
         setLoading(false);
       }
     };
     fetchProducts();
-  }, [category, sort, page, minPrice, maxPrice, brandFilter, ratingFilter]);
+  }, [category, subcategory, sort, page, minPrice, maxPrice, brandFilter, ratingFilter]);
 
   const setParam = (key, value) => {
     const p = new URLSearchParams(searchParams);
@@ -78,20 +93,56 @@ const ProductListing = () => {
       <div>
         <h4 className="font-semibold text-sm text-[var(--sattva-ink)] mb-3">Category</h4>
         <div className="space-y-2">
-          <button onClick={() => setParam('category', '')} className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${!category ? 'bg-[var(--sattva-forest)] text-[var(--sattva-cream)]' : 'hover:bg-[var(--sattva-muted)] text-[var(--sattva-ink)]'}`}>
+          <button onClick={() => {
+            const p = new URLSearchParams(searchParams);
+            p.delete('category'); p.delete('subcategory'); p.delete('page');
+            setSearchParams(p);
+          }} className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${!category ? 'bg-[var(--sattva-forest)] text-[var(--sattva-cream)]' : 'hover:bg-[var(--sattva-muted)] text-[var(--sattva-ink)]'}`}>
             All Categories
           </button>
-          {categories.filter(c => !c.parent).map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setParam('category', cat.name)}
-              className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${
-                category === cat.name ? 'bg-[var(--sattva-forest)] text-[var(--sattva-cream)]' : 'hover:bg-[var(--sattva-muted)] text-[var(--sattva-ink)]'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+          {categories.filter(c => !c.parent).map(cat => {
+            const subs = categories.filter(c => c.parent === cat.id);
+            const active = category === cat.name;
+            return (
+              <div key={cat.id}>
+                <button
+                  onClick={() => {
+                    const p = new URLSearchParams(searchParams);
+                    p.set('category', cat.name);
+                    p.delete('subcategory');
+                    p.delete('page');
+                    setSearchParams(p);
+                  }}
+                  className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${
+                    active ? 'bg-[var(--sattva-forest)] text-[var(--sattva-cream)]' : 'hover:bg-[var(--sattva-muted)] text-[var(--sattva-ink)]'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+                {active && subs.length > 0 && (
+                  <div className="mt-1 ml-3 pl-2 border-l border-[color:var(--sattva-border)] space-y-1">
+                    <button
+                      onClick={() => setParam('subcategory', '')}
+                      className={`w-full text-left text-xs px-2 py-1.5 rounded transition-colors ${!subcategory ? 'text-[var(--sattva-forest)] font-semibold' : 'text-gray-500 hover:text-[var(--sattva-forest)]'}`}
+                    >
+                      All {cat.name}
+                    </button>
+                    {subs.map(sub => (
+                      <button
+                        key={sub.id}
+                        onClick={() => setParam('subcategory', sub.name)}
+                        className={`w-full text-left text-xs px-2 py-1.5 rounded transition-colors ${
+                          subcategory === sub.name ? 'text-[var(--sattva-forest)] font-semibold' : 'text-gray-500 hover:text-[var(--sattva-forest)]'
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -167,15 +218,18 @@ const ProductListing = () => {
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-6">
           <Link to="/" className="hover:text-[var(--sattva-forest)]">Home</Link>
           <span>/</span>
-          <span className="text-[var(--sattva-ink)] font-medium">{category || 'All Products'}</span>
+          <span className="text-[var(--sattva-ink)] font-medium">{subcategory || category || 'All Products'}</span>
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-semibold text-[var(--sattva-ink)]">
-              {category || 'All Products'}
+              {subcategory || category || 'All Products'}
             </h1>
+            {subcategory && category && (
+              <p className="text-xs text-gray-400">in {category}</p>
+            )}
             <p className="text-sm text-gray-500 mt-1">{total} products found</p>
           </div>
           <div className="flex items-center gap-3">
