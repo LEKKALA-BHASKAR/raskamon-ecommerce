@@ -131,7 +131,7 @@ export default function B2BCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, category, vendorFilter, sort, hasB2BAccess, navigate]);
+  }, [page, search, category, vendorFilter, sort, hasB2BAccess]);
 
   useEffect(() => { load(); }, [load]);
 
