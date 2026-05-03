@@ -1,72 +1,30 @@
 // Centralized site content store — API-backed.
 // Single source of truth for admin & customer pages.
 // Reads from /api/site/* (public) and writes via /api/admin/* (admin auth).
-// localStorage is used purely as a hot-cache to avoid blank flashes during fetch.
+// No localStorage cache, no mock fallbacks — empty data renders empty states.
 
 import { useEffect, useState, useCallback } from 'react';
 import api from './api';
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from './mockData';
 
-const CACHE_KEY = 'drmediscie_site_content_cache_v2';
-
-// ===== Defaults (used until API responds; also used as seed by admin) =====
-const DEFAULT_HERO_SLIDES = [
-  {
-    id: 'hs_default_1',
-    badge: 'Clinically Backed Ayurveda',
-    title: 'Ancient Wisdom,\nModern Science',
-    subtitle: 'Premium Ayurvedic supplements crafted for modern wellness. Trusted by 50,000+ customers across India.',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=700&q=80',
-    accent: '#A3E635',
-    isActive: true,
-    order: 0,
-    ctas: [
-      { label: 'Shop Now', link: '/products', style: 'primary' },
-      { label: 'Explore Products', link: '/products', style: 'secondary' },
-    ],
-  },
-];
-
-const DEFAULT_FLASH_SALE = {
-  enabled: true,
-  title: "Today's Best Deals",
-  subtitle: "Grab these offers before they're gone — massive savings on top sellers",
-  badge: 'Flash Sale — Limited Time',
-  endsAt: Date.now() + 8 * 3600000,
-  productIds: [],
-};
-
-const DEFAULTS = {
-  heroSlides: DEFAULT_HERO_SLIDES,
+const EMPTY = {
+  heroSlides: [],
   testimonials: [],
-  flashSale: DEFAULT_FLASH_SALE,
-  bestsellerIds: MOCK_PRODUCTS.filter(p => p.isFeatured).slice(0, 8).map(p => p.id),
-  newArrivalIds: MOCK_PRODUCTS.slice(0, 4).map(p => p.id),
-  categories: MOCK_CATEGORIES,
+  flashSale: { enabled: false, productIds: [] },
+  bestsellerIds: [],
+  newArrivalIds: [],
   socialVideos: [],
-};
-
-const readCache = () => {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-};
-
-const writeCache = (data) => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  } catch {}
+  nav: null,
+  trustBadges: [],
+  featuresStrip: [],
+  portalSection: null,
+  statsBar: [],
+  banners: [],
 };
 
 // ===== Normalisers =====
 // Backend hero slides expose a `ctas: [{label, link, style}]` array. Home.js
-// already supports either object-form (primaryCta/secondaryCta) or flat fields
-// (primaryCtaLabel/Link). We project ctas back to the legacy flat fields so
-// Home.js needs no changes.
+// supports either object-form (primaryCta/secondaryCta) or flat fields
+// (primaryCtaLabel/Link). We project ctas to the legacy flat fields here.
 const normaliseHero = (slide) => {
   if (!slide) return slide;
   const out = { ...slide };
@@ -85,8 +43,8 @@ const normaliseHero = (slide) => {
 
 // ===== Fetcher =====
 export const fetchSiteContent = async () => {
-  const out = { ...DEFAULTS };
-  const calls = [
+  const out = { ...EMPTY };
+  await Promise.all([
     api.get('/site/hero').then(r => { out.heroSlides = (r.data || []).map(normaliseHero); }).catch(() => {}),
     api.get('/site/flash-sale').then(r => { if (r.data) out.flashSale = r.data; }).catch(() => {}),
     api.get('/site/curated/bestsellers').then(r => { out.bestsellerIds = r.data?.productIds || []; }).catch(() => {}),
@@ -94,16 +52,19 @@ export const fetchSiteContent = async () => {
     api.get('/site/testimonials').then(r => { out.testimonials = r.data || []; }).catch(() => {}),
     api.get('/site/social-videos').then(r => { out.socialVideos = r.data || []; }).catch(() => {}),
     api.get('/site/nav').then(r => { out.nav = r.data; }).catch(() => {}),
-  ];
-  await Promise.all(calls);
-  writeCache(out);
+    api.get('/site/blocks/trust_badges').then(r => { out.trustBadges = r.data || []; }).catch(() => {}),
+    api.get('/site/blocks/features_strip').then(r => { out.featuresStrip = r.data || []; }).catch(() => {}),
+    api.get('/site/blocks/portal_section').then(r => { out.portalSection = r.data || null; }).catch(() => {}),
+    api.get('/site/blocks/stats_bar').then(r => { out.statsBar = r.data || []; }).catch(() => {}),
+    api.get('/banners').then(r => { out.banners = r.data || []; }).catch(() => {}),
+  ]);
   return out;
 };
 
 // React hook — primary consumer
 export const useSiteContent = () => {
-  const cached = readCache();
-  const [content, setContent] = useState(cached || DEFAULTS);
+  const [content, setContent] = useState(EMPTY);
+  const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     const fresh = await fetchSiteContent();
@@ -112,21 +73,20 @@ export const useSiteContent = () => {
   }, []);
 
   useEffect(() => {
-    fetchSiteContent().then(setContent).catch(() => {});
-    const handler = () => {
-      const c = readCache();
-      if (c) setContent(c);
-    };
+    let cancelled = false;
+    fetchSiteContent()
+      .then(c => { if (!cancelled) { setContent(c); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    const handler = () => { fetchSiteContent().then(c => { if (!cancelled) setContent(c); }).catch(() => {}); };
     window.addEventListener('siteContentChange', handler);
-    return () => window.removeEventListener('siteContentChange', handler);
+    return () => { cancelled = true; window.removeEventListener('siteContentChange', handler); };
   }, []);
 
-  return { ...content, reload };
+  return { ...content, loading, reload };
 };
 
 // ===== Admin write helpers =====
 const denormaliseHero = (slide) => {
-  // Convert flat primary/secondary fields back to ctas array if needed
   const out = { ...slide };
   if (!Array.isArray(out.ctas) || out.ctas.length === 0) {
     const ctas = [];
@@ -149,18 +109,17 @@ export const saveFlashSale = async (config) => {
 };
 
 export const saveCurated = async (name, productIds) => {
-  // name: 'bestsellers' | 'new-arrivals'
   const { data } = await api.put(`/admin/curated/${name}`, { productIds });
   return data;
 };
 
-// Testimonials CRUD
+// Testimonials
 export const listTestimonialsAdmin = () => api.get('/admin/testimonials').then(r => r.data);
 export const createTestimonial = (t) => api.post('/admin/testimonials', t).then(r => r.data);
 export const updateTestimonial = (id, t) => api.put(`/admin/testimonials/${id}`, t).then(r => r.data);
 export const deleteTestimonial = (id) => api.delete(`/admin/testimonials/${id}`).then(r => r.data);
 
-// Social videos CRUD
+// Social videos
 export const listSocialVideosAdmin = () => api.get('/admin/social-videos').then(r => r.data);
 export const createSocialVideo = (v) => api.post('/admin/social-videos', v).then(r => r.data);
 export const updateSocialVideo = (id, v) => api.put(`/admin/social-videos/${id}`, v).then(r => r.data);
@@ -170,6 +129,10 @@ export const deleteSocialVideo = (id) => api.delete(`/admin/social-videos/${id}`
 export const getNavAdmin = () => api.get('/admin/nav').then(r => r.data);
 export const saveNav = (cfg) => api.put('/admin/nav', cfg).then(r => r.data);
 
+// Generic content blocks (trust_badges, features_strip, portal_section, stats_bar)
+export const getBlockAdmin = (key) => api.get(`/admin/blocks/${key}`).then(r => r.data);
+export const saveBlock = (key, value) => api.put(`/admin/blocks/${key}`, { value }).then(r => r.data);
+
 // Helpers
 export const getProductsByIds = (ids, allProducts) => {
   if (!Array.isArray(ids)) return [];
@@ -178,11 +141,5 @@ export const getProductsByIds = (ids, allProducts) => {
 
 // Notify subscribers (called by admin pages after a successful save)
 export const broadcastSiteContentChange = async () => {
-  await fetchSiteContent();
   window.dispatchEvent(new CustomEvent('siteContentChange'));
 };
-
-// Backwards-compatibility no-ops (legacy code paths)
-export const getSiteContent = () => readCache() || DEFAULTS;
-export const setSiteContent = () => { /* deprecated — use save* helpers */ };
-export const resetSiteContent = () => { try { localStorage.removeItem(CACHE_KEY); } catch {} };

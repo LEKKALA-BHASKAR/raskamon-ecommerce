@@ -167,8 +167,10 @@ class CategoryIn(BaseModel):
     name: str
     parent: Optional[str] = None
     image: Optional[str] = None
+    icon: Optional[str] = ''
     order: int = 0
     isActive: bool = True
+    description: Optional[str] = ''
 
 
 @router.get('/categories')

@@ -371,3 +371,44 @@ async def put_nav(payload: NavIn, _=Depends(require_admin)):
     patch = {k: v for k, v in payload.dict().items() if v is not None}
     merged = {**current, **patch}
     return await _set_kv('nav', merged)
+
+
+# ─── Generic content blocks (trust_badges, portal_section, features_strip, stats_bar) ─
+# These power marketing copy that previously lived as hardcoded arrays in components.
+
+ALLOWED_BLOCK_KEYS = {
+    'trust_badges',       # [{ icon, label, sub }]
+    'features_strip',     # [{ icon, text }]
+    'portal_section',     # { heading, subheading, cards: [...] }
+    'stats_bar',          # [{ icon, value, label, color }]
+    'offers',             # [{ id, title, subtitle, image, link, badge, isActive, order, startsAt, endsAt }]
+    'featured_products',  # { title, subtitle, productIds: [...] }
+    'homepage_layout',    # [{ key, enabled, order }] — admin-controlled section ordering
+    'about_page',         # { title, body, image, mission, vision, values: [...] }
+    'contact_info',       # { email, phone, address, hours, mapEmbed }
+}
+
+
+class BlockIn(BaseModel):
+    value: Any
+
+
+@router.get('/site/blocks/{key}')
+async def get_block_public(key: str):
+    if key not in ALLOWED_BLOCK_KEYS:
+        raise HTTPException(404, 'Unknown block')
+    return await _get_kv(key, [] if key in ('trust_badges', 'features_strip', 'stats_bar') else {})
+
+
+@router.get('/admin/blocks/{key}')
+async def get_block_admin(key: str, _=Depends(require_admin)):
+    if key not in ALLOWED_BLOCK_KEYS:
+        raise HTTPException(404, 'Unknown block')
+    return await _get_kv(key, [] if key in ('trust_badges', 'features_strip', 'stats_bar') else {})
+
+
+@router.put('/admin/blocks/{key}')
+async def put_block(key: str, payload: BlockIn, _=Depends(require_admin)):
+    if key not in ALLOWED_BLOCK_KEYS:
+        raise HTTPException(404, 'Unknown block')
+    return await _set_kv(key, payload.value)
