@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
@@ -86,7 +86,7 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState('7d');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setRefreshing(true);
     try {
       const [s, r] = await Promise.all([
@@ -100,9 +100,9 @@ const AdminDashboard = () => {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [period]);
 
-  useEffect(() => { loadData(); }, [period]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const pieData = (stats?.ordersByStatus || []).map(s => ({
     name: s._id?.charAt(0).toUpperCase() + s._id?.slice(1),

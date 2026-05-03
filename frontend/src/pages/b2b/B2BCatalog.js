@@ -126,7 +126,8 @@ export default function B2BCatalog() {
       const filtered = category ? mockB2B.filter(p => p.category === category) : mockB2B;
       const searched = search ? filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase())) : filtered;
       setProducts(searched);
-      if (!categories.length) setCategories(MOCK_CATEGORIES);
+      // Only set mock categories if none exist yet (use updater to avoid referencing outer scope)
+      setCategories(prev => (prev && prev.length ? prev : MOCK_CATEGORIES));
     } finally {
       setLoading(false);
     }
