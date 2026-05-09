@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Image, MessageSquare, BarChart2, FileText, Settings, LogOut, Menu, ChevronRight, ShieldCheck, Store, Wallet, Play, Sparkles, Compass } from 'lucide-react';
+import { LayoutDashboard, Package, FolderTree, ShoppingCart, Users, Tag, Image, MessageSquare, BarChart2, FileText, Settings, LogOut, Menu, ChevronRight, ShieldCheck, Store, Wallet, Play, Sparkles, Compass, Rss } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import BrandLogo from '../../components/brand/BrandLogo';
 
@@ -18,6 +18,7 @@ const navItems = [
   { icon: Sparkles, label: 'Home Content', path: '/admin/home-content' },
   { icon: Compass, label: 'Navigation', path: '/admin/navigation' },
   { icon: Play, label: 'Social Videos', path: '/admin/social-videos' },
+  { icon: Rss, label: 'Social Feed', path: '/admin/social-feed' },
   { icon: MessageSquare, label: 'Reviews', path: '/admin/reviews' },
   { icon: BarChart2, label: 'Analytics', path: '/admin/analytics' },
   { icon: FileText, label: 'Blog', path: '/admin/blog' },

@@ -50,7 +50,20 @@ export const fetchSiteContent = async () => {
     api.get('/site/curated/bestsellers').then(r => { out.bestsellerIds = r.data?.productIds || []; }).catch(() => {}),
     api.get('/site/curated/new-arrivals').then(r => { out.newArrivalIds = r.data?.productIds || []; }).catch(() => {}),
     api.get('/site/testimonials').then(r => { out.testimonials = r.data || []; }).catch(() => {}),
-    api.get('/site/social-videos').then(r => { out.socialVideos = r.data || []; }).catch(() => {}),
+    Promise.all([
+      api.get('/site/social-videos').then(r => r.data || []).catch(() => []),
+      api.get('/site/social-feed').then(r => r.data || []).catch(() => []),
+    ]).then(([manual, auto]) => {
+      // Merge: auto-fetched first (sorted newest), then manual adds; dedupe by externalId
+      const seen = new Set();
+      const merged = [...auto, ...manual].filter(v => {
+        const key = v.externalId || v.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      out.socialVideos = merged;
+    }),
     api.get('/site/nav').then(r => { out.nav = r.data; }).catch(() => {}),
     api.get('/site/blocks/trust_badges').then(r => { out.trustBadges = r.data || []; }).catch(() => {}),
     api.get('/site/blocks/features_strip').then(r => { out.featuresStrip = r.data || []; }).catch(() => {}),

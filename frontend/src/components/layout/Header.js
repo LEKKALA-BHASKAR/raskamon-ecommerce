@@ -85,14 +85,16 @@ const FALLBACK_TOP_CATEGORIES = [
   },
 ];
 
+const FALLBACK_SIMPLE_LINKS = [
+  { label: 'Customer Care', href: '/contact' },
+  { label: 'B2B Buyer', href: '/register/b2b' },
+];
+
 const MEGA_MENU = [
   // Removed 'B2B & Partners' section
 ];
 
-const FALLBACK_SIMPLE_LINKS = [
-  { label: 'Blog', href: '/blog' },
-  { label: 'About Us', href: '/about' },
-];
+
 
 const AnnouncementBar = ({ announcements }) => {
   const list = (announcements && announcements.length) ? announcements : FALLBACK_ANNOUNCEMENTS;
@@ -223,24 +225,174 @@ const Header = () => {
         }`}
       >
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
-          <motion.div
-            animate={{ height: scrolled ? '60px' : '72px' }}
-            transition={{ duration: 0.25 }}
-            className="flex items-center gap-8"
-          >
+
+          {/* ── Primary row ── */}
+          <div className="flex items-center h-[56px] lg:h-[60px] gap-3">
+
             {/* Logo */}
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <BrandLogo size={scrolled ? 'sm' : 'md'} />
+              <BrandLogo size="lg" />
             </Link>
 
-            {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-0.5 flex-1">
-              {/* Home link */}
+            {/* Search bar — desktop only, capped width */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="hidden lg:flex items-center gap-2 w-[300px] xl:w-[380px] rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-2 text-left shadow-sm hover:border-[var(--sattva-forest)] transition flex-shrink-0"
+            >
+              <Search size={15} className="text-gray-400 flex-shrink-0" />
+              <span className="text-sm text-gray-400 truncate">Search products…</span>
+            </button>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Desktop action buttons */}
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+              <Link
+                to="/account"
+                className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+              >
+                <Heart size={15} /> Wishlist
+              </Link>
+              <button
+                onClick={() => navigate(user ? '/account' : '/login')}
+                className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+              >
+                <User size={15} /> Account
+              </button>
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setCartOpen(true)}
+                className="relative flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+              >
+                <ShoppingBag size={15} /> Cart
+                {itemCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--sattva-forest)] px-1 text-[9px] font-black text-[var(--sattva-cream)]"
+                  >
+                    {itemCount > 9 ? '9+' : itemCount}
+                  </motion.span>
+                )}
+              </motion.button>
+            </div>
+
+            {/* Mobile icon buttons */}
+            <div className="flex lg:hidden items-center gap-0.5 flex-shrink-0">
+              <motion.button
+                data-testid="header-search-button"
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setSearchOpen(true)}
+                className="p-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                aria-label="Search"
+              >
+                <Search size={19} strokeWidth={2} />
+              </motion.button>
+
+              {user && (
+                <Link to="/account">
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    className="p-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                    aria-label="Wishlist"
+                  >
+                    <Heart size={19} strokeWidth={2} />
+                  </motion.button>
+                </Link>
+              )}
+
+              <Link to={user ? '/account' : '/login'}>
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  className="p-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                  aria-label="Account"
+                >
+                  <User size={19} strokeWidth={2} />
+                </motion.button>
+              </Link>
+
+              <motion.button
+                data-testid="header-cart-button"
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setCartOpen(true)}
+                className="relative p-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
+                aria-label="Cart"
+              >
+                <ShoppingBag size={19} strokeWidth={2} />
+                {itemCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-0.5 right-0.5 w-[16px] h-[16px] bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-[8px] font-black rounded-full flex items-center justify-center"
+                  >
+                    {itemCount > 9 ? '9+' : itemCount}
+                  </motion.span>
+                )}
+              </motion.button>
+
+              <button
+                className="p-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors ml-0.5"
+                onClick={() => setMobileOpen(!mobileOpen)}
+                aria-label="Menu"
+              >
+                <AnimatePresence mode="wait">
+                  {mobileOpen
+                    ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X size={20} /></motion.div>
+                    : <motion.div key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><Menu size={20} /></motion.div>
+                  }
+                </AnimatePresence>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Desktop nav row ── */}
+          <div className="hidden lg:flex items-center border-t border-[color:var(--sattva-border)]">
+            <nav className="flex items-center gap-0.5 whitespace-nowrap py-0.5">
               <Link to="/" className="px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] rounded-lg transition-colors flex-shrink-0">
                 Home
               </Link>
 
-              {/* Category dropdowns */}
+              <div
+                className="relative flex-shrink-0"
+                onMouseEnter={() => handleMenuEnter('Shop By Category')}
+                onMouseLeave={handleMenuLeave}
+              >
+                <button
+                  className={`flex items-center gap-1 px-3 py-2 text-sm font-semibold transition-colors rounded-lg ${
+                    openMenu === 'Shop By Category'
+                      ? 'text-[var(--sattva-forest)] bg-[var(--sattva-muted)]'
+                      : 'text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)]'
+                  }`}
+                >
+                  Shop By Category
+                  <ChevronDown size={12} className={`transition-transform duration-200 ${openMenu === 'Shop By Category' ? 'rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {openMenu === 'Shop By Category' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="absolute top-full left-0 mt-1 w-[360px] bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl shadow-[var(--shadow-lg)] z-50 overflow-hidden py-4"
+                    >
+                      <div className="grid grid-cols-2 gap-2 px-4">
+                        {TOP_CATEGORIES.map((cat) => (
+                          <Link
+                            key={cat.label}
+                            to={cat.href}
+                            className="block rounded-xl px-3 py-2 text-sm text-gray-600 hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] transition-colors"
+                          >
+                            {cat.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               {TOP_CATEGORIES.map((cat) => (
                 <div
                   key={cat.label}
@@ -292,27 +444,6 @@ const Header = () => {
                 </div>
               ))}
 
-              {/* Mega menus */}
-              {MEGA_MENU.map((menu) => (
-                <div
-                  key={menu.label}
-                  className="relative flex-shrink-0"
-                  onMouseEnter={() => handleMenuEnter(menu.label)}
-                  onMouseLeave={handleMenuLeave}
-                >
-                  <button className={`flex items-center gap-1 px-3 py-2 text-sm font-semibold transition-colors rounded-lg ${
-                    openMenu === menu.label
-                      ? 'text-[var(--sattva-forest)] bg-[var(--sattva-muted)]'
-                      : 'text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)]'
-                  }`}>
-                    {menu.label}
-                    <ChevronDown size={12} className={`transition-transform duration-200 ${openMenu === menu.label ? 'rotate-180' : ''}`} />
-                  </button>
-                  <MegaMenuDropdown menu={menu} visible={openMenu === menu.label} />
-                </div>
-              ))}
-
-              {/* Simple links */}
               {SimpleNavLinks.map(link => (
                 <Link
                   key={link.label}
@@ -322,158 +453,9 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
-
-              {/* B2B/Vendor quick links if logged in */}
-              {isB2B && (
-                <Link to="/b2b/catalog" className="ml-1 px-3 py-1.5 text-xs font-bold text-[var(--sattva-forest)] bg-green-50 border border-green-200 rounded-full hover:bg-green-100 transition-colors">
-                  B2B Catalog
-                </Link>
-              )}
-              {isVendor && (
-                <Link to="/vendor/dashboard" className="ml-1 px-3 py-1.5 text-xs font-bold text-[var(--sattva-forest)] bg-amber-50 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors">
-                  Vendor Portal
-                </Link>
-              )}
             </nav>
+          </div>
 
-            {/* Right Actions */}
-            <div className="flex items-center gap-0.5 ml-auto">
-              {/* Search */}
-              <motion.button
-                data-testid="header-search-button"
-                whileTap={{ scale: 0.92 }}
-                onClick={() => setSearchOpen(true)}
-                className="p-2.5 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-                aria-label="Search"
-              >
-                <Search size={19} strokeWidth={2} />
-              </motion.button>
-
-              {/* Wishlist */}
-              {user && (
-                <Link to="/account">
-                  <motion.button
-                    whileTap={{ scale: 0.92 }}
-                    className="hidden sm:flex p-2.5 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-                    aria-label="Wishlist"
-                  >
-                    <Heart size={19} strokeWidth={2} />
-                  </motion.button>
-                </Link>
-              )}
-
-              {/* Account dropdown */}
-              <div className="relative group">
-                <motion.button
-                  data-testid="header-account-button"
-                  whileTap={{ scale: 0.92 }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-                >
-                  {user ? (
-                    <div className="w-7 h-7 rounded-full bg-[var(--sattva-forest)] text-[var(--sattva-cream)] flex items-center justify-center text-xs font-bold">
-                      {user.name?.charAt(0)?.toUpperCase()}
-                    </div>
-                  ) : (
-                    <User size={19} strokeWidth={2} />
-                  )}
-                  {user && <span className="hidden sm:block text-xs font-semibold max-w-[70px] truncate">{user.name?.split(' ')[0]}</span>}
-                </motion.button>
-
-                {/* Dropdown */}
-                <div className="absolute right-0 top-full mt-2 w-52 bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl shadow-[var(--shadow-lg)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
-                  {user ? (
-                    <>
-                      <div className="px-4 py-3 border-b border-[color:var(--sattva-border)] bg-[var(--sattva-muted)]">
-                        <p className="text-sm font-bold text-[var(--sattva-ink)] truncate">{user.name}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
-                        <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full bg-[var(--sattva-forest)] text-[var(--sattva-cream)]">
-                          {canonicalRole.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <div className="py-1.5">
-                        <Link to="/account" className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">
-                          <Package size={14} /> My Account
-                        </Link>
-                        {isAdmin && (
-                          <Link to="/admin" className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--sattva-forest)] font-semibold hover:bg-green-50 transition-colors">
-                            <LayoutDashboard size={14} /> Admin Panel
-                          </Link>
-                        )}
-                        {isVendor && (
-                          <Link to="/vendor/dashboard" className="flex items-center gap-2 px-4 py-2 text-sm text-amber-700 font-semibold hover:bg-amber-50 transition-colors">
-                            <Store size={14} /> Vendor Portal
-                          </Link>
-                        )}
-                        {isB2B && (
-                          <Link to="/b2b/dashboard" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-700 font-semibold hover:bg-blue-50 transition-colors">
-                            <Building2 size={14} /> B2B Dashboard
-                          </Link>
-                        )}
-                        <button
-                          onClick={() => { logout(); navigate('/'); }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut size={14} /> Sign Out
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="py-2">
-                      <Link to="/login" className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors">
-                        <User size={14} /> Sign In
-                      </Link>
-                      <Link to="/register" className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[var(--sattva-forest)] hover:bg-green-50 transition-colors">
-                        <Sparkles size={14} /> Create Account
-                      </Link>
-                      <div className="mx-3 my-2 pt-2 border-t border-[color:var(--sattva-border)]">
-                        <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1.5">Business</p>
-                        <Link to="/register/b2b" className="flex items-center gap-2 px-1 py-1.5 text-xs text-blue-700 hover:text-blue-900 font-medium transition-colors">
-                          <Building2 size={12} /> B2B Registration
-                        </Link>
-                        <Link to="/register/vendor" className="flex items-center gap-2 px-1 py-1.5 text-xs text-amber-700 hover:text-amber-900 font-medium transition-colors">
-                          <Store size={12} /> Vendor Registration
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Cart */}
-              <motion.button
-                data-testid="header-cart-button"
-                whileTap={{ scale: 0.92 }}
-                onClick={() => setCartOpen(true)}
-                className="relative flex items-center gap-1.5 px-3 py-2 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors text-[var(--sattva-ink)]"
-                aria-label="Cart"
-              >
-                <ShoppingBag size={19} strokeWidth={2} />
-                {itemCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-[9px] font-black rounded-full flex items-center justify-center"
-                  >
-                    {itemCount > 9 ? '9+' : itemCount}
-                  </motion.span>
-                )}
-              </motion.button>
-
-              {/* Mobile hamburger */}
-              <button
-                className="lg:hidden p-2.5 rounded-xl hover:bg-[var(--sattva-muted)] transition-colors ml-1"
-                onClick={() => setMobileOpen(!mobileOpen)}
-                aria-label="Menu"
-              >
-                <AnimatePresence mode="wait">
-                  {mobileOpen
-                    ? <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><X size={20} /></motion.div>
-                    : <motion.div key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><Menu size={20} /></motion.div>
-                  }
-                </AnimatePresence>
-              </button>
-            </div>
-          </motion.div>
         </div>
 
         {/* Mobile Menu */}
@@ -497,9 +479,6 @@ const Header = () => {
                 ))}
                 <div className="border-t border-[color:var(--sattva-border)] my-2" />
                 <p className="eyebrow text-gray-400 px-3 py-2">More</p>
-                {[{ l: '📝 Blog', h: '/blog' }, { l: 'ℹ️ About Us', h: '/about' }, { l: '📞 Contact', h: '/contact' }].map(({ l, h }) => (
-                  <Link key={l} to={h} className="block px-3 py-2.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] rounded-xl transition-colors">{l}</Link>
-                ))}
                 <div className="border-t border-[color:var(--sattva-border)] my-3" />
                 {user ? (
                   <>

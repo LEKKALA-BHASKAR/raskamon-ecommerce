@@ -12,6 +12,7 @@ Collections:
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Any
+from urllib.parse import urlencode
 from datetime import datetime
 import uuid
 
@@ -295,7 +296,7 @@ DEFAULT_NAV = {
         'tagline': "Premium Ayurvedic wellness crafted with ancient wisdom for modern lives.",
         'helpLinks': [
             {'label': 'About Us', 'to': '/about'},
-            {'label': 'Contact Us', 'to': '/contact'},
+            {'label': 'Customer Care', 'to': '/contact'},
             {'label': 'FAQ', 'to': '/faq'},
             {'label': 'Blog', 'to': '/blog'},
             {'label': 'Shipping & Returns', 'to': '/shipping'},
@@ -312,8 +313,8 @@ DEFAULT_NAV = {
         },
     },
     'simpleLinks': [
-        {'label': 'Blog', 'href': '/blog'},
-        {'label': 'About Us', 'href': '/about'},
+        {'label': 'Customer Care', 'href': '/contact'},
+        {'label': 'B2B Buyer', 'href': '/register/b2b'},
     ],
 }
 
@@ -326,7 +327,7 @@ class NavIn(BaseModel):
 
 async def _build_category_nav() -> List[dict]:
     """Build top-nav from categories collection (parent → children)."""
-    cats = await categories_col.find({}).sort([('order', 1)]).to_list(200)
+    cats = await categories_col.find({'isActive': {'$ne': False}}).sort([('order', 1)]).to_list(200)
     cats = serialize_doc(cats)
     children = {}
     parents = []
@@ -338,14 +339,18 @@ async def _build_category_nav() -> List[dict]:
     out = []
     for p in parents:
         subs = children.get(p['id'], [])
+        parent_name = p.get('name', '')
         out.append({
             'id': p['id'],
-            'label': p.get('name'),
+            'label': parent_name,
             'slug': p.get('slug'),
             'icon': p.get('icon', ''),
-            'href': f"/products?category={p.get('name', '')}",
+            'href': f"/products?{urlencode({'category': parent_name})}",
             'sub': [
-                {'label': s.get('name'), 'href': f"/products?category={p.get('name', '')}&subcategory={s.get('name', '')}"}
+                {
+                    'label': s.get('name'),
+                    'href': f"/products?{urlencode({'category': parent_name, 'subcategory': s.get('name', '')})}",
+                }
                 for s in subs
             ],
         })

@@ -13,6 +13,7 @@ from routers import auth, users, products, categories, cart, orders, reviews, pa
 from routers import auth_v2, admin_users
 from routers import vendor_products, b2b_catalog, vendor_analytics, vendor_ledger
 from routers import site_content
+from routers import social_feed
 from database import create_indexes, db as _mongo_db
 from utils.audit import init_audit_logger
 
@@ -87,9 +88,30 @@ app.include_router(vendor_ledger.router, prefix="/api/vendor/ledger", tags=["ven
 # Mixed prefix: exposes /api/site/* (public) and /api/admin/* (auth) from one router.
 app.include_router(site_content.router, prefix="/api", tags=["site_content"])
 
+# ==================== SOCIAL FEED (auto-fetched YouTube / Instagram / Facebook) ====================
+app.include_router(social_feed.router, prefix="/api", tags=["social_feed"])
+
 @app.get("/api")
 async def root():
     return {"message": "Dr MediScie API v1.0.0", "status": "running"}
+
+_scheduler = None
+
+
+def _start_scheduler():
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from routers.social_feed import _sync_all_platforms
+
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(_sync_all_platforms, 'interval', hours=24, id='social_feed_sync', replace_existing=True)
+        scheduler.start()
+        logging.info("APScheduler started — social feed will sync every 24 h")
+        return scheduler
+    except ImportError:
+        logging.warning("apscheduler not installed — social feed auto-sync disabled. Run: pip install apscheduler")
+        return None
+
 
 @app.on_event("startup")
 async def startup():
@@ -109,8 +131,14 @@ async def startup():
     except Exception as _e:
         logging.warning(f"Phase 1 index creation warning: {_e}")
     logging.basicConfig(level=logging.INFO)
+    global _scheduler
+    _scheduler = _start_scheduler()
+
 
 @app.on_event("shutdown")
 async def shutdown():
+    global _scheduler
+    if _scheduler:
+        _scheduler.shutdown(wait=False)
     from database import client
     client.close()

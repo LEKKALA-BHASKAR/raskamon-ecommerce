@@ -10,6 +10,7 @@ import ProductListing from '@/pages/ProductListing';
 import ProductDetail from '@/pages/ProductDetail';
 import Checkout from '@/pages/Checkout';
 import OrderSuccess from '@/pages/OrderSuccess';
+import PaymentCallback from '@/pages/PaymentCallback';
 import SearchResults from '@/pages/SearchResults';
 import { Blog, BlogPost } from '@/pages/Blog';
 import { About, Contact, FAQ, Privacy, Terms, Shipping } from '@/pages/StaticPages';
@@ -40,6 +41,7 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminPayouts from '@/pages/admin/AdminPayouts';
 import AdminVendorProducts from '@/pages/admin/AdminVendorProducts';
 import AdminSocialVideos from '@/pages/admin/AdminSocialVideos';
+import AdminSocialFeed from '@/pages/admin/AdminSocialFeed';
 import AdminHomeContent from '@/pages/admin/AdminHomeContent';
 import AdminNavigation from '@/pages/admin/AdminNavigation';
 
@@ -89,6 +91,7 @@ function App() {
             {/* Protected User Routes */}
             <Route path="/account" element={<AccountDashboard />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route path="/payment/callback" element={<PaymentCallback />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
 
             {/* ====== B2B MARKETPLACE ====== */}
@@ -128,6 +131,7 @@ function App() {
               <Route path="blog" element={<AdminBlog />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="social-videos" element={<AdminSocialVideos />} />
+              <Route path="social-feed" element={<AdminSocialFeed />} />
               <Route path="home-content" element={<AdminHomeContent />} />
               <Route path="navigation" element={<AdminNavigation />} />
             </Route>

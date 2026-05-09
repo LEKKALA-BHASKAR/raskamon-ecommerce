@@ -7,21 +7,32 @@ import Layout from '../components/layout/Layout';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import GatewaySelector from '../components/payment/GatewaySelector';
+import PaymentProcessor from '../components/payment/PaymentProcessor';
+import PaymentStatus from '../components/payment/PaymentStatus';
 
 const STEPS = ['Address', 'Payment', 'Review'];
 
 const Checkout = () => {
-  const [step, setStep] = useState(0);
-  const [address, setAddress] = useState({ name: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
+  const [step, setStep]               = useState(0);
+  const [address, setAddress]         = useState({ name: '', phone: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '' });
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [couponCode, setCouponCode] = useState('');
-  const [couponData, setCouponData] = useState(null);
+  const [gateway, setGateway]         = useState('razorpay');
+  const [couponCode, setCouponCode]   = useState('');
+  const [couponData, setCouponData]   = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
-  const [placing, setPlacing] = useState(false);
-  const { cart, cartId, clearCart } = useCart();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const [placing, setPlacing]         = useState(false);
+
+  // Payment flow state
+  const [payScreen, setPayScreen]     = useState(null);  // null | 'processing' | 'success' | 'failed'
+  const [gatewayData, setGatewayData] = useState(null);  // response from /payments/initiate
+  const [completedOrderId, setCompletedOrderId] = useState('');
+  const [paidAmount, setPaidAmount]   = useState(null);
+  const [payError, setPayError]       = useState('');
+
+  const { cart, cartId, clearCart }   = useCart();
+  const { user }                      = useAuth();
+  const navigate                      = useNavigate();
 
   useEffect(() => {
     if (!user) { navigate('/login?redirect=/checkout'); return; }
@@ -33,10 +44,10 @@ const Checkout = () => {
     }).catch(() => {});
   }, [user, cart, navigate]);
 
-  const subtotal = cart.total || 0;
+  const subtotal       = cart.total || 0;
   const shippingCharge = subtotal >= 499 ? 0 : 79;
-  const discount = couponData?.discount || 0;
-  const total = subtotal - discount + shippingCharge;
+  const discount       = couponData?.discount || 0;
+  const total          = subtotal - discount + shippingCharge;
 
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -48,9 +59,7 @@ const Checkout = () => {
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Invalid coupon');
       setCouponData(null);
-    } finally {
-      setCouponLoading(false);
-    }
+    } finally { setCouponLoading(false); }
   };
 
   const validateAddress = () => {
@@ -58,67 +67,96 @@ const Checkout = () => {
     return required.every(f => address[f]?.trim());
   };
 
+  // ── Place order + initiate gateway ──────────────────────────────────────
   const placeOrder = async () => {
     if (!validateAddress()) { toast.error('Please fill all address fields'); return; }
     setPlacing(true);
     try {
-      const orderData = {
+      const orderRes = await api.post('/orders/', {
         items: cart.items.map(i => ({ productId: i.productId, quantity: i.quantity, variant: i.variant })),
         shippingAddress: address,
-        paymentMethod,
+        paymentMethod: gateway,
         couponCode: couponData?.code || null,
-        cartId
-      };
-      const orderRes = await api.post('/orders/', orderData);
+        cartId,
+      });
       const order = orderRes.data;
+      setPaidAmount(total);
 
-      if (paymentMethod === 'cod') {
+      if (gateway === 'cod') {
         await clearCart();
         navigate(`/order-success/${order.id}`);
-      } else {
-        // Razorpay flow
-        const payRes = await api.post('/payments/create-order', { order_id: order.id });
-        const { razorpay_order_id, amount, key_id } = payRes.data;
-
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        document.body.appendChild(script);
-        script.onload = () => {
-          const rzp = new window.Razorpay({
-            key: key_id,
-            amount,
-            currency: 'INR',
-            order_id: razorpay_order_id,
-            name: 'Dr MediScie',
-            description: `Order #${order.invoiceId}`,
-            prefill: { name: user.name, email: user.email, contact: user.phone || '' },
-            theme: { color: '#1A3C34' },
-            handler: async (response) => {
-              try {
-                await api.post('/payments/verify', {
-                  order_id: order.id,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature
-                });
-                await clearCart();
-                navigate(`/order-success/${order.id}`);
-              } catch {
-                toast.error('Payment verification failed');
-              }
-            },
-            modal: { ondismiss: () => toast.info('Payment cancelled') }
-          });
-          rzp.open();
-        };
+        return;
       }
+
+      // Initiate payment with the selected gateway
+      setPayScreen('processing');
+      const initRes = await api.post('/payments/initiate', {
+        order_id: order.id,
+        gateway,
+      });
+      setGatewayData({ ...initRes.data, _orderId: order.id });
+
     } catch (err) {
+      setPayScreen(null);
       toast.error(err.response?.data?.detail || 'Failed to place order');
     } finally {
       setPlacing(false);
     }
   };
 
+  // ── Callbacks from PaymentProcessor ────────────────────────────────────
+  const handlePaySuccess = async (verifyResult) => {
+    setGatewayData(null);
+    setCompletedOrderId(verifyResult?.order_id || gatewayData?._orderId || '');
+    await clearCart();
+    setPayScreen('success');
+  };
+
+  const handlePayFailure = (err) => {
+    setGatewayData(null);
+    setPayError(err?.response?.data?.detail || err?.message || 'Payment was not completed');
+    setPayScreen('failed');
+  };
+
+  const handleRetry = () => {
+    setPayScreen(null);
+    setGatewayData(null);
+    setPayError('');
+    setStep(1);
+  };
+
+  // ── Full-screen payment states ──────────────────────────────────────────
+  if (payScreen) {
+    return (
+      <Layout>
+        <div className="max-w-2xl mx-auto px-4 py-16">
+          {/* Invisible processor for Razorpay / PhonePe / Airpay */}
+          {gatewayData && (
+            <PaymentProcessor
+              gatewayData={gatewayData}
+              orderAmount={paidAmount}
+              storeName="Sattva"
+              userEmail={user?.email || ''}
+              userPhone={user?.phone || address.phone || ''}
+              userName={user?.name || address.name || ''}
+              onSuccess={handlePaySuccess}
+              onFailure={handlePayFailure}
+            />
+          )}
+          <PaymentStatus
+            status={payScreen}
+            orderId={completedOrderId}
+            amount={paidAmount}
+            gateway={gateway}
+            errorMsg={payError}
+            onRetry={handleRetry}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
+  // ── Normal checkout flow ────────────────────────────────────────────────
   return (
     <Layout>
       <div className="container-sattva py-8">
@@ -141,16 +179,15 @@ const Checkout = () => {
                 }`}>{s}</span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-3 ${
-                  i < step ? 'bg-[var(--sattva-forest)]' : 'bg-[var(--sattva-border)]'
-                }`} />
+                <div className={`flex-1 h-0.5 mx-3 ${i < step ? 'bg-[var(--sattva-forest)]' : 'bg-[var(--sattva-border)]'}`} />
               )}
             </React.Fragment>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+
+          {/* ── Step 0: Address ─────────────────────────────────────────── */}
           <div className="lg:col-span-2">
             {step === 0 && (
               <motion.div
@@ -192,7 +229,7 @@ const Checkout = () => {
                       <input
                         type="text"
                         value={address[key]}
-                        onChange={(e) => setAddress(a => ({...a, [key]: e.target.value}))}
+                        onChange={(e) => setAddress(a => ({ ...a, [key]: e.target.value }))}
                         placeholder={placeholder}
                         className="w-full px-3 py-2.5 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
                       />
@@ -209,44 +246,21 @@ const Checkout = () => {
               </motion.div>
             )}
 
+            {/* ── Step 1: Payment Method ─────────────────────────────── */}
             {step === 1 && (
               <motion.div
                 data-testid="checkout-payment-form"
                 initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
                 className="card-sattva p-6"
               >
-                <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2">
+                <h2 className="font-heading text-lg font-semibold mb-5 flex items-center gap-2">
                   <CreditCard size={18} className="text-[var(--sattva-forest)]" /> Payment Method
                 </h2>
 
-                <div className="space-y-3 mb-6">
-                  {[
-                    { value: 'cod', label: 'Cash on Delivery', desc: 'Pay when you receive your order', badge: '+₹29 COD charge' },
-                    { value: 'razorpay', label: 'Online Payment', desc: 'Cards, UPI, Netbanking, Wallets via Razorpay', badge: 'Secure' },
-                  ].map(opt => (
-                    <label key={opt.value} className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-colors ${
-                      paymentMethod === opt.value ? 'border-[var(--sattva-forest)] bg-[rgba(26,60,52,0.03)]' : 'border-[color:var(--sattva-border)]'
-                    }`}>
-                      <input
-                        type="radio"
-                        value={opt.value}
-                        checked={paymentMethod === opt.value}
-                        onChange={() => setPaymentMethod(opt.value)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">{opt.label}</span>
-                          <span className="text-[10px] px-2 py-0.5 bg-[var(--sattva-muted)] text-[var(--sattva-forest)] rounded-full font-medium">{opt.badge}</span>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                <GatewaySelector selected={gateway} onChange={setGateway} />
 
                 {/* Coupon */}
-                <div className="p-4 bg-[var(--sattva-muted)] rounded-xl mb-4">
+                <div className="mt-6 p-4 bg-[var(--sattva-muted)] rounded-xl">
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
                     <Tag size={14} /> Apply Coupon
                   </p>
@@ -258,11 +272,7 @@ const Checkout = () => {
                       placeholder="Enter coupon code"
                       className="flex-1 px-3 py-2 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] focus:outline-none"
                     />
-                    <button
-                      onClick={applyCoupon}
-                      disabled={couponLoading}
-                      className="px-4 py-2 btn-outlined text-sm"
-                    >
+                    <button onClick={applyCoupon} disabled={couponLoading} className="px-4 py-2 btn-outlined text-sm">
                       Apply
                     </button>
                   </div>
@@ -271,10 +281,10 @@ const Checkout = () => {
                       <Check size={12} /> {couponData.message}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">Try: SATTVA10, WELCOME15, FLAT200</p>
+                  <p className="text-xs text-gray-400 mt-1">Try: SATTVA10, WELCOME15, FLAT200</p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-6">
                   <button onClick={() => setStep(0)} className="flex-1 btn-outlined py-3">Back</button>
                   <button onClick={() => setStep(2)} className="flex-1 btn-primary py-3 flex items-center justify-center gap-2">
                     Review Order <ChevronRight size={16} />
@@ -283,6 +293,7 @@ const Checkout = () => {
               </motion.div>
             )}
 
+            {/* ── Step 2: Review & Place ─────────────────────────────── */}
             {step === 2 && (
               <motion.div
                 initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
@@ -292,15 +303,18 @@ const Checkout = () => {
                   <ShoppingBag size={18} className="text-[var(--sattva-forest)]" /> Review Order
                 </h2>
 
-                {/* Address Summary */}
                 <div className="p-4 bg-[var(--sattva-muted)] rounded-xl mb-4">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Delivering To</p>
                   <p className="text-sm font-medium">{address.name} | {address.phone}</p>
                   <p className="text-xs text-gray-500">{address.addressLine1}, {address.city}, {address.state} - {address.pincode}</p>
                 </div>
 
-                {/* Items */}
-                <div className="space-y-3 mb-4">
+                <div className="p-4 bg-[var(--sattva-muted)] rounded-xl mb-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Payment Via</p>
+                  <p className="text-sm font-medium capitalize">{gateway === 'cod' ? 'Cash on Delivery' : gateway}</p>
+                </div>
+
+                <div className="space-y-3 mb-6">
                   {cart.items?.map(item => (
                     <div key={item.productId} className="flex gap-3">
                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-[var(--sattva-muted)] flex-shrink-0">
@@ -310,7 +324,9 @@ const Checkout = () => {
                         <p className="text-sm font-medium line-clamp-1">{item.product?.name}</p>
                         <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums">₹{((item.product?.discountPrice || 0) * item.quantity).toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        ₹{((item.product?.discountPrice || 0) * item.quantity).toLocaleString('en-IN')}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -323,26 +339,40 @@ const Checkout = () => {
                     disabled={placing}
                     className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
                   >
-                    {placing ? 'Placing...' : paymentMethod === 'cod' ? 'Place Order' : 'Pay Now'}
+                    {placing
+                      ? 'Placing...'
+                      : gateway === 'cod'
+                        ? 'Place Order'
+                        : `Pay ₹${total.toLocaleString('en-IN')}`}
                   </button>
                 </div>
               </motion.div>
             )}
           </div>
 
-          {/* Order Summary */}
+          {/* ── Order Summary sidebar ──────────────────────────────────── */}
           <div className="lg:col-span-1">
             <div className="card-sattva p-6 sticky top-24">
               <h3 className="font-heading text-base font-semibold mb-4">Order Summary</h3>
               <div className="space-y-2 text-sm mb-4">
-                <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{subtotal.toLocaleString('en-IN')}</span></div>
-                {discount > 0 && <div className="flex justify-between text-green-600"><span>Discount</span><span>-₹{discount.toFixed(0)}</span></div>}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span>₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span><span>-₹{discount.toFixed(0)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className={shippingCharge === 0 ? 'text-green-600' : ''}>{shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}</span>
+                  <span className={shippingCharge === 0 ? 'text-green-600' : ''}>
+                    {shippingCharge === 0 ? 'FREE' : `₹${shippingCharge}`}
+                  </span>
                 </div>
                 <div className="border-t border-[color:var(--sattva-border)] my-2 pt-2 flex justify-between font-bold">
-                  <span>Total</span><span className="text-[var(--sattva-forest)]">₹{total.toLocaleString('en-IN')}</span>
+                  <span>Total</span>
+                  <span className="text-[var(--sattva-forest)]">₹{total.toLocaleString('en-IN')}</span>
                 </div>
               </div>
               {cart.items?.map(item => (

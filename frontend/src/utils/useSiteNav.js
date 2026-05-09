@@ -15,7 +15,7 @@ const FALLBACK = {
     tagline: "Premium Ayurvedic wellness crafted with ancient wisdom for modern lives.",
     helpLinks: [
       { label: 'About Us', to: '/about' },
-      { label: 'Contact Us', to: '/contact' },
+      { label: 'Customer Care', to: '/contact' },
       { label: 'FAQ', to: '/faq' },
       { label: 'Blog', to: '/blog' },
       { label: 'Shipping & Returns', to: '/shipping' },
@@ -26,8 +26,8 @@ const FALLBACK = {
     socials: { instagram: '#', facebook: '#', twitter: '#', youtube: '#' },
   },
   simpleLinks: [
-    { label: 'Blog', href: '/blog' },
-    { label: 'About Us', href: '/about' },
+    { label: 'Customer Care', href: '/contact' },
+    { label: 'B2B Buyer', href: '/register/b2b' },
   ],
 };
 
@@ -37,6 +37,26 @@ const readCache = () => {
   try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || null; } catch { return null; }
 };
 
+const EXCLUDED_SIMPLE_LINKS = ['Blog', 'About Us'];
+
+const mergeLinks = (primary = [], fallback = []) => {
+  const seen = new Set();
+  const normalize = (link) => `${link.label}::${link.href || link.to || ''}`;
+  const merged = [];
+
+  [...primary, ...fallback].forEach((link) => {
+    const key = normalize(link);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(link);
+    }
+  });
+
+  return merged;
+};
+
+const filterSimpleLinks = (links = []) => links.filter(link => !EXCLUDED_SIMPLE_LINKS.includes(link.label));
+
 export const useSiteNav = () => {
   const [nav, setNav] = useState(() => readCache() || FALLBACK);
 
@@ -45,14 +65,24 @@ export const useSiteNav = () => {
       if (r.data) {
         const merged = { ...FALLBACK, ...r.data };
         merged.footer = { ...FALLBACK.footer, ...(r.data.footer || {}) };
+        merged.simpleLinks = filterSimpleLinks(mergeLinks(r.data.simpleLinks || [], FALLBACK.simpleLinks));
+        merged.footer.helpLinks = mergeLinks(r.data.footer?.helpLinks || [], FALLBACK.footer.helpLinks);
         setNav(merged);
         try { localStorage.setItem(CACHE_KEY, JSON.stringify(merged)); } catch {}
       }
-    }).catch(() => {});
+    }).catch(() => {
+      localStorage.removeItem(CACHE_KEY);
+    });
 
     const handler = () => {
       api.get('/site/nav').then(r => {
-        if (r.data) setNav({ ...FALLBACK, ...r.data, footer: { ...FALLBACK.footer, ...(r.data.footer || {}) } });
+        if (r.data) {
+          const merged = { ...FALLBACK, ...r.data };
+          merged.footer = { ...FALLBACK.footer, ...(r.data.footer || {}) };
+          merged.simpleLinks = filterSimpleLinks(mergeLinks(r.data.simpleLinks || [], FALLBACK.simpleLinks));
+          merged.footer.helpLinks = mergeLinks(r.data.footer?.helpLinks || [], FALLBACK.footer.helpLinks);
+          setNav(merged);
+        }
       }).catch(() => {});
     };
     window.addEventListener('siteContentChange', handler);

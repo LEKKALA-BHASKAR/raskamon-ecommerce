@@ -206,7 +206,7 @@ const CategoryGrid = ({ categories }) => {
     <section className="section-padding bg-sattva-paper">
       <div className="container-sattva">
         <div className="text-center mb-10">
-          <p className="text-[var(--sattva-gold)] text-xs font-semibold uppercase tracking-[0.2em] mb-2">Shop by Health Goal</p>
+          <p className="text-[var(--sattva-gold)] text-xs font-semibold uppercase tracking-[0.2em] mb-2">Shop by Care Goal</p>
           <h2 className="font-heading text-3xl md:text-4xl font-semibold text-[var(--sattva-ink)]">What Are You Looking For?</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -368,6 +368,10 @@ const PLATFORM_CONFIG = {
 const VideoCard = ({ video }) => {
   const platform = PLATFORM_CONFIG[video.platform] || PLATFORM_CONFIG.youtube;
   const isShort = video.type === 'reel' || video.type === 'short';
+  const [playing, setPlaying] = useState(false);
+
+  // Auto-fetched items have redirectUrl + thumbnail; manual items have embedUrl
+  const isAutoFetched = Boolean(video.redirectUrl && !video.embedUrl);
 
   const autoplayUrl = (() => {
     const url = video.embedUrl || '';
@@ -376,33 +380,95 @@ const VideoCard = ({ video }) => {
       return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=1&rel=0`;
     }
     if (url.includes('?')) return url.includes('autoplay') ? url : `${url}&autoplay=1&muted=1`;
-    return `${url}?autoplay=1&muted=1`;
+    return url ? `${url}?autoplay=1&muted=1` : '';
   })();
+
+  const publishedDate = video.publishedAt
+    ? new Date(video.publishedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '';
+
+  const typeLabel = video.type === 'reel' ? 'REEL' : video.type === 'short' ? 'SHORT' : video.type === 'post' ? 'POST' : 'VIDEO';
+
+  const MediaBlock = () => {
+    if (isAutoFetched || !autoplayUrl) {
+      // Thumbnail-based card with external redirect
+      return (
+        <a href={video.redirectUrl} target="_blank" rel="noopener noreferrer"
+          className="relative block overflow-hidden" style={{ aspectRatio: isShort ? '9/16' : '16/9' }}>
+          {video.thumbnail ? (
+            <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-4xl text-gray-300">▶</div>
+          )}
+          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: platform.color + 'cc' }}>
+              <span className="text-white text-lg">▶</span>
+            </div>
+          </div>
+          <div className="absolute top-3 left-3">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: platform.color, color: 'white' }}>
+              {typeLabel}
+            </span>
+          </div>
+        </a>
+      );
+    }
+
+    return (
+      <div className="relative overflow-hidden" style={{ aspectRatio: isShort ? '9/16' : '16/9' }}>
+        {playing ? (
+          <iframe
+            src={autoplayUrl} className="w-full h-full" frameBorder="0"
+            allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
+            title={video.title} loading="lazy"
+          />
+        ) : (
+          <button onClick={() => setPlaying(true)} className="w-full h-full block relative group/thumb">
+            {video.thumbnail ? (
+              <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center text-4xl text-gray-300">▶</div>
+            )}
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: platform.color + 'cc' }}>
+                <span className="text-white text-lg">▶</span>
+              </div>
+            </div>
+          </button>
+        )}
+        <div className="absolute top-3 left-3 pointer-events-none">
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: platform.color, color: 'white' }}>
+            {typeLabel}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
       className={`group rounded-2xl overflow-hidden bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] hover:shadow-xl transition-all duration-300 ${isShort ? 'row-span-2' : ''}`}
     >
-      <div className="relative overflow-hidden" style={{ aspectRatio: isShort ? '9/16' : '16/9' }}>
-        <iframe
-          src={autoplayUrl} className="w-full h-full" frameBorder="0"
-          allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
-          title={video.title} loading="lazy"
-        />
-        <div className="absolute top-3 left-3 pointer-events-none">
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ backgroundColor: platform.color, color: 'white' }}>
-            {video.type === 'reel' ? 'REEL' : video.type === 'short' ? 'SHORT' : 'VIDEO'}
-          </span>
-        </div>
-      </div>
+      <MediaBlock />
       <div className="p-4">
-        <div className="flex items-center gap-1.5 mb-2">
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: platform.bg, color: platform.textColor }}>{platform.label}</span>
           {video.views && <span className="text-xs text-gray-400">{video.views}</span>}
+          {publishedDate && <span className="text-xs text-gray-400 ml-auto">{publishedDate}</span>}
         </div>
         <h4 className="font-semibold text-[var(--sattva-ink)] text-sm leading-snug line-clamp-2 group-hover:text-[var(--sattva-forest)]">{video.title}</h4>
+        {video.caption && video.caption !== video.title && (
+          <p className="text-xs text-gray-400 mt-1 line-clamp-2">{video.caption}</p>
+        )}
+        {video.channelTitle && <p className="text-xs text-gray-400 mt-1">{video.channelTitle}</p>}
         {video.channel && <p className="text-xs text-gray-400 mt-1">{video.channel}</p>}
+        {video.redirectUrl && (
+          <a href={video.redirectUrl} target="_blank" rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[var(--sattva-forest)] hover:underline">
+            View on {platform.label} →
+          </a>
+        )}
       </div>
     </motion.div>
   );
@@ -665,6 +731,229 @@ const BannerStrip = ({ banners = [] }) => {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// Why Us — three-pillar value proposition (Kapiva-style)
+// ────────────────────────────────────────────────────────────────────────────
+const WhyUsSection = ({ data }) => {
+  const defaults = {
+    eyebrow: 'Healthy Inside, Happy Outside',
+    title: 'Why Dr Mediscie?',
+    pillars: [
+      {
+        heading: 'Formulated by Experts at Dr Mediscie Academy of Ayurveda',
+        body:
+          "Experts at Dr Mediscie Academy of Ayurveda, PhD's, and Ayurvedacharya with over 50 years of cumulative experience build formulations with scientifically and clinically tested ingredients, to make our proprietary products that help you reach your health goals.",
+      },
+      {
+        heading: 'The Best Ingredients Passed Through Toughest Process',
+        body:
+          'We go the extra mile to source the best ingredients like Shilajit from 18000 Ft. in the Himalayas, Aloe Vera from the Thar Desert, and Noni from Andamans. Our Hair Oils are made with herbs slowly heated with Oil for days or Body butter with Ghee 100 times washed. We manufacture our products in GMP-certified facilities, of which 8 are USFDA approved.',
+      },
+      {
+        heading: 'Holistic Solutions for Every Need',
+        body:
+          "Be it acne, hair fall, or diabetes, we don't stop at just giving you products as that is just one element of solving your problem. We also give free health expert advice, personalized diet plans, and lifestyle recommendations including Yoga Asanas.",
+      },
+    ],
+  };
+  const cfg = { ...defaults, ...(data || {}) };
+  const pillars = (cfg.pillars && cfg.pillars.length ? cfg.pillars : defaults.pillars).slice(0, 3);
+
+  const icons = [
+    // Leaf / expert formulation
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+      <path d="M21 3c0 9-6 15-15 15-1 0-2 0-3-1 0-9 6-15 15-15 1 0 2 0 3 1z" />
+      <path d="M3 21c4-8 9-13 18-15" />
+    </svg>,
+    // Sparkle / quality
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5L19 19M5 19l2.5-2.5M16.5 7.5L19 5" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>,
+    // Heart / holistic
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+      <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z" />
+    </svg>,
+  ];
+
+  return (
+    <section className="section-padding relative overflow-hidden bg-gradient-to-b from-[var(--sattva-paper)] via-white to-[var(--sattva-paper)]">
+      {/* Decorative background ornaments */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[var(--sattva-gold)]/10 blur-3xl" />
+        <div className="absolute -bottom-32 -right-24 w-[28rem] h-[28rem] rounded-full bg-[var(--sattva-forest)]/10 blur-3xl" />
+        <svg className="absolute top-10 right-10 w-40 h-40 text-[var(--sattva-gold)]/15" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.6">
+          <circle cx="50" cy="50" r="48" />
+          <circle cx="50" cy="50" r="36" />
+          <circle cx="50" cy="50" r="24" />
+          <path d="M50 2v96M2 50h96M15 15l70 70M85 15L15 85" />
+        </svg>
+      </div>
+
+      <div className="container-sattva relative">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-2xl mx-auto mb-14 md:mb-20"
+        >
+          {cfg.eyebrow && (
+            <div className="inline-flex items-center gap-2 mb-4">
+              <span className="h-px w-8 bg-[var(--sattva-gold)]" />
+              <p className="text-[var(--sattva-gold)] text-[11px] font-semibold uppercase tracking-[0.3em]">{cfg.eyebrow}</p>
+              <span className="h-px w-8 bg-[var(--sattva-gold)]" />
+            </div>
+          )}
+          <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl font-semibold text-[var(--sattva-ink)] leading-tight">
+            {cfg.title?.split('?')[0]}
+            <span className="text-[var(--sattva-gold)]">?</span>
+          </h2>
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <span className="h-px w-12 bg-[var(--sattva-border)]" />
+            <svg className="w-4 h-4 text-[var(--sattva-gold)]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z" /></svg>
+            <span className="h-px w-12 bg-[var(--sattva-border)]" />
+          </div>
+        </motion.div>
+
+        {/* Pillar cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {pillars.map((p, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.55, delay: i * 0.12 }}
+              className="group relative"
+            >
+              {/* Gold gradient border wrapper */}
+              <div className="relative h-full rounded-2xl bg-gradient-to-br from-[var(--sattva-gold)]/40 via-transparent to-[var(--sattva-forest)]/30 p-[1.5px] shadow-sm hover:shadow-2xl transition-shadow duration-500">
+                <div className="relative h-full rounded-2xl bg-white p-7 md:p-8 overflow-hidden">
+                  {/* Big faded number */}
+                  <span className="absolute -top-4 -right-2 font-heading text-[8rem] leading-none font-bold text-[var(--sattva-gold)]/[0.07] select-none">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+
+                  {/* Icon badge */}
+                  <div className="relative mb-6">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[var(--sattva-gold)] to-[#b8893a] text-white shadow-md group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                      {icons[i % icons.length]}
+                    </div>
+                    <span className="absolute -bottom-1 left-3 right-3 h-2 rounded-full bg-[var(--sattva-gold)]/20 blur-md" />
+                  </div>
+
+                  {/* Step label */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="font-heading text-sm font-bold text-[var(--sattva-gold)] tracking-widest">
+                      0{i + 1}
+                    </span>
+                    <span className="h-px flex-1 bg-gradient-to-r from-[var(--sattva-gold)]/40 to-transparent" />
+                  </div>
+
+                  <h3 className="relative font-heading text-base md:text-lg font-bold text-[var(--sattva-ink)] mb-3 leading-snug">
+                    {p.heading}
+                  </h3>
+
+                  <p className="relative text-[var(--sattva-ink)]/70 text-sm leading-relaxed">
+                    {p.body}
+                  </p>
+
+                  {/* Bottom accent line */}
+                  <div className="relative mt-6 h-[3px] w-10 rounded-full bg-gradient-to-r from-[var(--sattva-gold)] to-[var(--sattva-forest)] group-hover:w-20 transition-all duration-500" />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Trust strip */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4 }}
+          className="mt-16 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.25em] text-[var(--sattva-ink)]/60 font-semibold"
+        >
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--sattva-gold)]" /> 100% Ayurvedic</span>
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--sattva-gold)]" /> GMP Certified</span>
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--sattva-gold)]" /> Clinically Tested</span>
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--sattva-gold)]" /> Cruelty Free</span>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// In the News — press mentions strip
+// ────────────────────────────────────────────────────────────────────────────
+const InTheNewsSection = ({ data }) => {
+  const defaults = {
+    title: 'In the News',
+    eyebrow: 'Improving health with Ayurveda',
+    statValue: '2M+',
+    statLabel: 'Happy Ayurveda Consumers',
+    items: [
+      { source: 'D2C', text: 'Most Admired D2C Brand of the Year in the Fitness & Wellness category.' },
+      { source: 'CNBC TV18', text: "Featured Dr Mediscie's Plans for Global Expansion." },
+      { source: 'The Financial Express', text: "Featured Dr Mediscie's brand film launch." },
+      { source: 'Hindustan Times', text: 'Featured Dr Mediscie Dia Free Juice as a solution to manage Diabetes.' },
+    ],
+  };
+  const cfg = { ...defaults, ...(data || {}) };
+  const items = cfg.items && cfg.items.length ? cfg.items : defaults.items;
+
+  return (
+    <section className="section-padding bg-sattva-paper">
+      <div className="container-sattva">
+        <h2 className="font-heading text-3xl md:text-4xl font-semibold text-[var(--sattva-ink)] mb-10">
+          {cfg.title}
+        </h2>
+
+        <div className="text-center mb-10">
+          {cfg.eyebrow && (
+            <p className="text-[var(--sattva-gold)] text-sm italic font-medium mb-2">{cfg.eyebrow}</p>
+          )}
+          <p className="font-heading text-4xl md:text-5xl font-bold text-[var(--sattva-gold)] leading-none">
+            {cfg.statValue}
+          </p>
+          <p className="text-[var(--sattva-gold)] text-xs font-semibold uppercase tracking-[0.25em] mt-2">
+            {cfg.statLabel}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {items.map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08 }}
+              className="bg-white rounded-xl border border-[color:var(--sattva-border)] p-5 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="h-10 flex items-center justify-center mb-3">
+                {item.logo ? (
+                  <img src={item.logo} alt={item.source} className="max-h-10 object-contain" loading="lazy" />
+                ) : (
+                  <span className="font-heading font-bold text-[var(--sattva-forest)] text-sm uppercase tracking-wide">
+                    {item.source}
+                  </span>
+                )}
+              </div>
+              <div className="border-t border-[color:var(--sattva-border)] pt-3">
+                <p className="text-xs text-[var(--sattva-ink)]/70 leading-relaxed">{item.text}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // Home
 // ────────────────────────────────────────────────────────────────────────────
 const Home = () => {
@@ -703,7 +992,9 @@ const Home = () => {
       <BannerStrip banners={content.banners} />
       <SocialVideosSection videos={content.socialVideos} socials={content.nav?.footer?.socials || {}} />
       <PortalSection data={content.portalSection} statsBar={content.statsBar} />
+      <WhyUsSection data={content.whyUs} />
       <Testimonials items={content.testimonials} />
+      {/* <InTheNewsSection data={content.inTheNews} /> */}
       <ProductSection title="New Arrivals" subtitle="Fresh Rituals" products={newArrivals} link="/products?sort=newest" />
       <BlogPreview posts={blogPosts} />
     </Layout>

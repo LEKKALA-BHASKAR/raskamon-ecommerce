@@ -30,6 +30,9 @@ gst_invoices_col = db['gst_invoices']
 site_content_col = db['site_content']
 testimonials_col = db['testimonials']
 social_videos_col = db['social_videos']
+social_accounts_col = db['social_accounts']   # platform API config (per platform)
+social_feed_col = db['social_feed']           # auto-fetched posts/videos
+transactions_col = db['transactions']         # multi-gateway payment transactions
 
 
 async def create_indexes():
@@ -54,3 +57,11 @@ async def create_indexes():
     await site_content_col.create_index('key', unique=True)
     await testimonials_col.create_index('order')
     await social_videos_col.create_index('order')
+    await social_accounts_col.create_index('platform', unique=True)
+    await social_feed_col.create_index([('platform', 1), ('externalId', 1)], unique=True)
+    await social_feed_col.create_index('publishedAt')
+    await transactions_col.create_index('userId')
+    await transactions_col.create_index('orderId')
+    await transactions_col.create_index('gatewayOrderId')
+    await transactions_col.create_index('paymentStatus')
+    await transactions_col.create_index('createdAt')
