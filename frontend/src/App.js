@@ -3,6 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import { TrackingProvider } from '@/context/TrackingContext';
+import ConsentBanner from '@/components/retargeting/ConsentBanner';
+import AbandonedCartPopup from '@/components/retargeting/AbandonedCartPopup';
+import AdminRetargeting from '@/pages/admin/AdminRetargeting';
 
 // Pages
 import Home from '@/pages/Home';
@@ -39,11 +43,14 @@ import AdminAnalytics from '@/pages/admin/AdminAnalytics';
 import AdminBlog from '@/pages/admin/AdminBlog';
 import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminPayouts from '@/pages/admin/AdminPayouts';
+import AdminPayments from '@/pages/admin/AdminPayments';
 import AdminVendorProducts from '@/pages/admin/AdminVendorProducts';
 import AdminSocialVideos from '@/pages/admin/AdminSocialVideos';
 import AdminSocialFeed from '@/pages/admin/AdminSocialFeed';
 import AdminHomeContent from '@/pages/admin/AdminHomeContent';
 import AdminNavigation from '@/pages/admin/AdminNavigation';
+import AdminWallet from '@/pages/admin/AdminWallet';
+import WalletDashboard from '@/pages/account/WalletDashboard';
 
 // Vendor Portal Pages
 import VendorLayout from '@/pages/vendor/VendorLayout';
@@ -64,6 +71,9 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <BrowserRouter>
+          <TrackingProvider>
+          <ConsentBanner />
+          <AbandonedCartPopup />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
@@ -90,6 +100,7 @@ function App() {
 
             {/* Protected User Routes */}
             <Route path="/account" element={<AccountDashboard />} />
+            <Route path="/account/wallet" element={<WalletDashboard />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/payment/callback" element={<PaymentCallback />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
@@ -122,6 +133,7 @@ function App() {
               <Route path="vendor-products" element={<AdminVendorProducts />} />
               <Route path="payouts" element={<AdminPayouts />} />
               <Route path="orders" element={<AdminOrders />} />
+              <Route path="payments" element={<AdminPayments />} />
               <Route path="customers" element={<AdminCustomers />} />
               <Route path="categories" element={<AdminCategories />} />
               <Route path="coupons" element={<AdminCoupons />} />
@@ -134,12 +146,15 @@ function App() {
               <Route path="social-feed" element={<AdminSocialFeed />} />
               <Route path="home-content" element={<AdminHomeContent />} />
               <Route path="navigation" element={<AdminNavigation />} />
+              <Route path="wallet" element={<AdminWallet />} />
+              <Route path="retargeting" element={<AdminRetargeting />} />
             </Route>
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
+          </TrackingProvider>
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>

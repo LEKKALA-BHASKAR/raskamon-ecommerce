@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, User, Briefcase, Store, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, User, Briefcase, Store, ArrowRight, Gift } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'sonner';
 import Layout from '../../components/layout/Layout';
@@ -48,10 +48,17 @@ export { RoleSwitcher };
 
 const Register = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
+  const [referralCode, setReferralCode] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const ref = searchParams.get('ref');
+    if (ref) setReferralCode(ref.toUpperCase());
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,11 +66,37 @@ const Register = () => {
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password, form.phone);
-      toast.success('Account created! Welcome to Dr MediScie.');
+      // Pass referralCode along via direct API call (register util may not support it)
+      const api = (await import('../../utils/api')).default;
+      const res = await api.post('/auth/register', {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        phone: form.phone || undefined,
+        referralCode: referralCode || undefined,
+      });
+      // Use AuthContext register to set user state
+      if (res.data.access_token) {
+        localStorage.setItem('access_token', res.data.access_token);
+        localStorage.setItem('refresh_token', res.data.refresh_token || '');
+        // Trigger auth context refresh
+        await register(form.name, form.email, form.password, form.phone).catch(() => {});
+      }
+      if (referralCode) {
+        toast.success('Account created! Referral code applied — enjoy your welcome bonus!');
+      } else {
+        toast.success('Account created! Welcome to Dr MediScie.');
+      }
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Registration failed');
+      // If direct API fails, fall back to register util
+      try {
+        await register(form.name, form.email, form.password, form.phone);
+        toast.success('Account created! Welcome to Dr MediScie.');
+        navigate('/');
+      } catch (err2) {
+        toast.error(err.response?.data?.detail || err2?.response?.data?.detail || 'Registration failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,6 +136,25 @@ const Register = () => {
                   />
                 </div>
               ))}
+              {/* Referral code field */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                  <Gift size={12} className="inline mr-1" /> Referral Code (optional)
+                </label>
+                <input
+                  type="text"
+                  value={referralCode}
+                  onChange={e => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. ABC12345"
+                  className="w-full px-4 py-3 text-sm border border-[color:var(--sattva-border)] rounded-xl bg-[var(--sattva-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
+                />
+                {referralCode && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <Gift size={10} /> Referral code applied — get ₹50 welcome bonus!
+                  </p>
+                )}
+              </div>
+
               {['password', 'confirm'].map((key) => (
                 <div key={key}>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">

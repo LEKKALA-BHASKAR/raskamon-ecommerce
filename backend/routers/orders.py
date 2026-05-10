@@ -31,6 +31,7 @@ class CreateOrderIn(BaseModel):
     paymentMethod: str  # 'razorpay' | 'cod'
     couponCode: Optional[str] = None
     cartId: Optional[str] = None
+    walletRedemption: Optional[float] = 0.0
 
 
 @router.post('/')
@@ -70,7 +71,28 @@ async def create_order(data: CreateOrderIn, current_user=Depends(get_current_use
                 await coupons_col.update_one({'_id': coupon['_id']}, {'$push': {'usedBy': current_user['_id']}})
 
     shipping_charge = 0 if subtotal >= 499 else 79
-    total = subtotal - discount + shipping_charge
+    total_before_wallet = subtotal - discount + shipping_charge
+
+    # Wallet redemption validation
+    wallet_redemption = float(data.walletRedemption or 0)
+    if wallet_redemption > 0:
+        try:
+            from services.cashback_service import get_cashback_settings
+            from services.wallet_service import get_wallet
+            settings = await get_cashback_settings()
+            if not settings.get('walletRedemptionEnabled', True):
+                wallet_redemption = 0
+            else:
+                wallet = await get_wallet(current_user['_id'])
+                wallet_balance = wallet.get('balance', 0)
+                max_redemption_pct = settings.get('maxRedemptionPercent', 50.0)
+                max_allowed = total_before_wallet * max_redemption_pct / 100
+                wallet_redemption = min(wallet_redemption, wallet_balance, max_allowed)
+                wallet_redemption = round(wallet_redemption, 2)
+        except Exception:
+            wallet_redemption = 0
+
+    total = max(0.0, total_before_wallet - wallet_redemption)
 
     order_id = str(uuid.uuid4())
     order_doc = {
@@ -88,6 +110,7 @@ async def create_order(data: CreateOrderIn, current_user=Depends(get_current_use
         'shippingCharge': shipping_charge,
         'totalAmount': total,
         'couponUsed': coupon_used,
+        'walletRedemption': wallet_redemption,
         'razorpayOrderId': None,
         'razorpayPaymentId': None,
         'timeline': [{'status': 'placed', 'timestamp': now().isoformat(), 'note': 'Order placed'}],
@@ -97,6 +120,16 @@ async def create_order(data: CreateOrderIn, current_user=Depends(get_current_use
         'updatedAt': now()
     }
     await orders_col.insert_one(order_doc)
+
+    # Debit wallet if redemption was applied
+    if wallet_redemption > 0:
+        try:
+            from services.wallet_service import redeem_wallet
+            await redeem_wallet(current_user['_id'], wallet_redemption, order_id)
+        except Exception as e:
+            # Non-fatal: log and continue
+            import logging
+            logging.getLogger(__name__).error(f'Wallet debit failed for order {order_id}: {e}')
 
     # Deduct stock
     for item in order_items:

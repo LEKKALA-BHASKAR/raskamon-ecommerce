@@ -19,6 +19,7 @@ class RegisterIn(BaseModel):
     email: EmailStr
     password: str
     phone: Optional[str] = None
+    referralCode: Optional[str] = None
 
 class LoginIn(BaseModel):
     email: EmailStr
@@ -67,6 +68,17 @@ async def register(data: RegisterIn):
         'updatedAt': now(),
     }
     await users_col.insert_one(user_doc)
+
+    # Referral and wallet setup
+    try:
+        from services.referral_service import get_or_create_referral_profile, apply_referral_on_signup
+        await get_or_create_referral_profile(user_id)
+        if data.referralCode:
+            await apply_referral_on_signup(user_id, data.referralCode)
+    except Exception as _re:
+        import logging
+        logging.getLogger(__name__).error(f'Referral setup failed for user {user_id}: {_re}')
+
     access_token = create_access_token({'sub': user_id, 'email': data.email.lower()})
     refresh_token = create_refresh_token({'sub': user_id})
     user_doc.pop('password', None)

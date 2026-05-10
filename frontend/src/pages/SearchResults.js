@@ -3,21 +3,24 @@ import { useSearchParams, Link } from 'react-router-dom';
 import api from '../utils/api';
 import Layout from '../components/layout/Layout';
 import ProductCard from '../components/product/ProductCard';
+import useTracking from '../hooks/useTracking';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { trackSearch } = useTracking();
 
   useEffect(() => {
     if (!query) return;
     setLoading(true);
+    trackSearch(query);
     api.get(`/products?search=${encodeURIComponent(query)}&limit=24`)
       .then(r => setResults(r.data.products))
       .catch(() => setResults([]))
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Layout>

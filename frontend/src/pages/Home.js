@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import RecommendedProducts from '../components/retargeting/RecommendedProducts';
+import RetargetingBanner from '../components/retargeting/RetargetingBanner';
+import RecentlyViewed from '../components/retargeting/RecentlyViewed';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, ArrowRight, Sparkles, Leaf, Shield, Star,
@@ -997,6 +1000,12 @@ const Home = () => {
       {/* <InTheNewsSection data={content.inTheNews} /> */}
       <ProductSection title="New Arrivals" subtitle="Fresh Rituals" products={newArrivals} link="/products?sort=newest" />
       <BlogPreview posts={blogPosts} />
+      {/* Retargeting personalization section */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <RetargetingBanner />
+        <RecentlyViewed />
+        <RecommendedProducts title="Recommended For You" />
+      </div>
     </Layout>
   );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import useTracking from '../hooks/useTracking';
+import RecommendedProducts from '../components/retargeting/RecommendedProducts';
 import { Star, Heart, ShoppingBag, Share2, ChevronLeft, ChevronRight, Check, Minus, Plus, Truck, Shield, RefreshCw } from 'lucide-react';
 import api from '../utils/api';
 import Layout from '../components/layout/Layout';
@@ -42,6 +44,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { trackProductView, trackAddToCart, trackWishlistAdd } = useTracking();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -50,6 +53,7 @@ const ProductDetail = () => {
       try {
         const res = await api.get(`/products/${slug}`);
         setProduct(res.data);
+        trackProductView(res.data);
         const [relRes, revRes] = await Promise.all([
           api.get(`/products/${res.data.id}/related?limit=4`),
           api.get(`/reviews/product/${res.data.id}?limit=5`)
@@ -75,11 +79,13 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!product) return;
     addToCart(product.id, quantity);
+    trackAddToCart(product, quantity);
   };
 
   const handleBuyNow = () => {
     if (!product) return;
     addToCart(product.id, quantity);
+    trackAddToCart(product, quantity);
     navigate('/checkout');
   };
 
@@ -93,6 +99,7 @@ const ProductDetail = () => {
       } else {
         await api.post(`/users/me/wishlist/${product.id}`);
         setWishlisted(true);
+        trackWishlistAdd(product);
         toast.success('Added to wishlist');
       }
     } catch { toast.error('Error updating wishlist'); }
@@ -424,6 +431,11 @@ const ProductDetail = () => {
             </div>
           </div>
         )}
+
+        {/* AI-Powered Recommendations */}
+        <div className="mt-8">
+          <RecommendedProducts title="Recommended For You" />
+        </div>
       </div>
     </Layout>
   );

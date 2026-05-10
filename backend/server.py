@@ -14,6 +14,8 @@ from routers import auth_v2, admin_users
 from routers import vendor_products, b2b_catalog, vendor_analytics, vendor_ledger
 from routers import site_content
 from routers import social_feed
+from routers import wallet, admin_wallet
+from routers import tracking, recommendations, retargeting, admin_retargeting
 from database import create_indexes, db as _mongo_db
 from utils.audit import init_audit_logger
 
@@ -91,6 +93,16 @@ app.include_router(site_content.router, prefix="/api", tags=["site_content"])
 # ==================== SOCIAL FEED (auto-fetched YouTube / Instagram / Facebook) ====================
 app.include_router(social_feed.router, prefix="/api", tags=["social_feed"])
 
+# ==================== WALLET / CASHBACK / REFERRAL ====================
+app.include_router(wallet.router, prefix="/api/wallet", tags=["wallet"])
+app.include_router(admin_wallet.router, prefix="/api/admin", tags=["admin_wallet"])
+
+# ==================== RETARGETING & REMARKETING ENGINE ====================
+app.include_router(tracking.router, prefix="/api/tracking", tags=["tracking"])
+app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"])
+app.include_router(retargeting.router, prefix="/api/retargeting", tags=["retargeting"])
+app.include_router(admin_retargeting.router, prefix="/api/admin/retargeting", tags=["admin_retargeting"])
+
 @app.get("/api")
 async def root():
     return {"message": "Dr MediScie API v1.0.0", "status": "running"}
@@ -102,14 +114,27 @@ def _start_scheduler():
     try:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from routers.social_feed import _sync_all_platforms
+        from services.campaign_service import (
+            process_cart_abandonment_campaigns,
+            process_high_intent_campaigns,
+        )
 
         scheduler = AsyncIOScheduler()
         scheduler.add_job(_sync_all_platforms, 'interval', hours=24, id='social_feed_sync', replace_existing=True)
+        # Retargeting cron jobs
+        scheduler.add_job(
+            process_cart_abandonment_campaigns, 'interval', minutes=15,
+            id='cart_abandonment_campaigns', replace_existing=True
+        )
+        scheduler.add_job(
+            process_high_intent_campaigns, 'interval', hours=1,
+            id='high_intent_campaigns', replace_existing=True
+        )
         scheduler.start()
-        logging.info("APScheduler started — social feed will sync every 24 h")
+        logging.info("APScheduler started — social feed + retargeting campaigns active")
         return scheduler
     except ImportError:
-        logging.warning("apscheduler not installed — social feed auto-sync disabled. Run: pip install apscheduler")
+        logging.warning("apscheduler not installed — auto-sync disabled. Run: pip install apscheduler")
         return None
 
 

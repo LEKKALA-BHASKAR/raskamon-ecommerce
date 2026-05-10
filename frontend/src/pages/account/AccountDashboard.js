@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
-import { User, Package, Heart, MapPin, Settings, LogOut, ChevronRight, Star, Bell } from 'lucide-react';
+import { User, Package, Heart, MapPin, Settings, LogOut, ChevronRight, Star, Bell, Wallet } from 'lucide-react';
 import api from '../../utils/api';
 import Layout from '../../components/layout/Layout';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ import { StarRating } from '../../components/product/ProductCard';
 
 const navItems = [
   { icon: Package, label: 'My Orders', path: '/account/orders' },
+  { icon: Wallet, label: 'Wallet & Rewards', path: '/account/wallet' },
   { icon: Heart, label: 'Wishlist', path: '/account/wishlist' },
   { icon: MapPin, label: 'Addresses', path: '/account/addresses' },
   { icon: Bell, label: 'Notifications', path: '/account/notifications' },

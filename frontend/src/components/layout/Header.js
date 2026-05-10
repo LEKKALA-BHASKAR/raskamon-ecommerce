@@ -185,6 +185,8 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [openAccountMenu, setOpenAccountMenu] = useState(false);
+  const accountCloseTimer = useRef(null);
   const { user, logout, isAdmin, isVendor, isB2B } = useAuth();
   const { itemCount, setCartOpen } = useCart();
   const location = useLocation();
@@ -210,6 +212,14 @@ const Header = () => {
     closeTimer.current = setTimeout(() => setOpenMenu(null), 120);
   };
 
+  const handleAccountEnter = () => {
+    clearTimeout(accountCloseTimer.current);
+    setOpenAccountMenu(true);
+  };
+  const handleAccountLeave = () => {
+    accountCloseTimer.current = setTimeout(() => setOpenAccountMenu(false), 120);
+  };
+
   const canonicalRole = user ? (user.role?.toUpperCase?.() || '') : '';
 
   return (
@@ -227,26 +237,25 @@ const Header = () => {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
 
           {/* ── Primary row ── */}
-          <div className="flex items-center h-[56px] lg:h-[60px] gap-3">
+          <div className="relative flex items-center justify-between h-[56px] lg:h-[60px]">
 
-            {/* Logo */}
-            <Link to="/" className="flex-shrink-0 flex items-center">
-              <BrandLogo size="lg" />
-            </Link>
+            {/* Left side: Logo */}
+            <div className="flex items-center">
+              <Link to="/" className="flex-shrink-0 flex items-center">
+                <BrandLogo size="lg" />
+              </Link>
+            </div>
 
-            {/* Search bar — desktop only, capped width */}
+            {/* Search bar — absolutely centered on desktop */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden lg:flex items-center gap-2 w-[300px] xl:w-[380px] rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-2 text-left shadow-sm hover:border-[var(--sattva-forest)] transition flex-shrink-0"
+              className="absolute left-1/2 transform -translate-x-1/2 hidden lg:flex items-center gap-2 w-[300px] xl:w-[380px] rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-2 text-left shadow-sm hover:border-[var(--sattva-forest)] transition"
             >
               <Search size={15} className="text-gray-400 flex-shrink-0" />
               <span className="text-sm text-gray-400 truncate">Search products…</span>
             </button>
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Desktop action buttons */}
+            {/* Right side: Action buttons */}
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
               <Link
                 to="/account"
@@ -254,12 +263,105 @@ const Header = () => {
               >
                 <Heart size={15} /> Wishlist
               </Link>
-              <button
-                onClick={() => navigate(user ? '/account' : '/login')}
-                className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+
+              <div
+                className="relative"
+                onMouseEnter={handleAccountEnter}
+                onMouseLeave={handleAccountLeave}
               >
-                <User size={15} /> Account
-              </button>
+                <button
+                  onClick={() => navigate(user ? '/account' : '/login')}
+                  className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+                >
+                  <User size={15} /> Account
+                </button>
+                <AnimatePresence>
+                  {openAccountMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="absolute right-0 top-full mt-2 w-[220px] bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl shadow-[var(--shadow-lg)] z-50 overflow-hidden"
+                    >
+                      <div className="py-2">
+                        {!user ? (
+                          <>
+                            <Link
+                              to="/login"
+                              className="block px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors"
+                            >
+                              Sign In
+                            </Link>
+                            <Link
+                              to="/register"
+                              className="block px-3 py-2 text-sm font-semibold text-[var(--sattva-forest)] hover:bg-green-50 transition-colors"
+                            >
+                              Create Account
+                            </Link>
+                            <Link
+                              to="/register/b2b"
+                              className="block px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors"
+                            >
+                              Business
+                            </Link>
+                            <Link
+                              to="/register/b2b"
+                              className="block px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition-colors"
+                            >
+                              B2B Registration
+                            </Link>
+                            <Link
+                              to="/register/vendor"
+                              className="block px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                            >
+                              Vendor Registration
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <Link
+                              to="/account"
+                              className="block px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors"
+                            >
+                              My Account
+                            </Link>
+                            <Link
+                              to="/orders"
+                              className="block px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition-colors"
+                            >
+                              Orders
+                            </Link>
+                            {isVendor && (
+                              <Link
+                                to="/vendor/dashboard"
+                                className="block px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                              >
+                                Vendor Portal
+                              </Link>
+                            )}
+                            {isB2B && (
+                              <Link
+                                to="/b2b/catalog"
+                                className="block px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 transition-colors"
+                              >
+                                B2B Catalog
+                              </Link>
+                            )}
+                            <button
+                              onClick={() => { logout(); navigate('/'); }}
+                              className="w-full text-left px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              Sign Out
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setCartOpen(true)}
