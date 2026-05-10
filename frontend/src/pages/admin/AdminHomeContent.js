@@ -312,32 +312,89 @@ const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
 };
 
 // ---------- Flash Sale Editor ----------
+// Convert epoch-ms or ISO → local datetime-local string (for <input type="datetime-local">)
+function toDatetimeLocal(val) {
+  if (!val) return '';
+  const d = new Date(typeof val === 'number' ? val : val);
+  if (isNaN(d.getTime())) return '';
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
 const FlashSaleEditor = ({ config = {}, products, onChange }) => {
   const setField = (k, v) => onChange({ ...config, [k]: v });
-  const dt = config.endsAt ? new Date(config.endsAt) : new Date(Date.now() + 8 * 3600000);
-  const dtLocal = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  // Derived schedule status for display
+  const now = Date.now();
+  const startsMs = config.startsAt ? new Date(config.startsAt).getTime() : null;
+  const endsMs   = config.endsAt   ? new Date(config.endsAt).getTime()   : null;
+  const isLive    = config.enabled !== false
+    && (startsMs === null || now >= startsMs)
+    && (endsMs   === null || now <= endsMs);
+  const isScheduled = config.enabled !== false && startsMs !== null && now < startsMs;
+  const isExpired   = endsMs !== null && now > endsMs;
 
   return (
     <div className="space-y-5">
       <div className="bg-white rounded-2xl border p-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Status badge */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
+          <h3 className="font-semibold text-sm text-gray-700">Flash Sale Settings</h3>
+          {isLive      && <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">🟢 LIVE NOW</span>}
+          {isScheduled && <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">🔵 Scheduled</span>}
+          {isExpired   && <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-600">🔴 Expired</span>}
+          {!config.enabled && !isExpired && <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">⚪ Disabled</span>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <Field label="Section Title" value={config.title} onChange={v => setField('title', v)} />
-          <Field label="Subtitle" value={config.subtitle} onChange={v => setField('subtitle', v)} />
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Sale Ends At</label>
+          <Field label="Subtitle (optional)" value={config.subtitle} onChange={v => setField('subtitle', v)} />
+          <Field label="Badge Text" value={config.badge} onChange={v => setField('badge', v)} />
+          <label className="flex items-center gap-2 cursor-pointer self-end pb-2">
             <input
-              type="datetime-local"
-              value={dtLocal}
-              onChange={e => setField('endsAt', new Date(e.target.value).getTime())}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[var(--sattva-forest)]"
+              type="checkbox"
+              checked={config.enabled !== false}
+              onChange={e => setField('enabled', e.target.checked)}
+              className="w-4 h-4 accent-[var(--sattva-forest)]"
             />
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer mt-6">
-            <input type="checkbox" checked={config.enabled !== false} onChange={e => setField('enabled', e.target.checked)} className="w-4 h-4 accent-[var(--sattva-forest)]" />
-            <span className="text-sm font-medium">Show Flash Sale section on homepage</span>
+            <span className="text-sm font-medium">Enable Flash Sale on homepage</span>
           </label>
         </div>
+
+        {/* Date range */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-orange-50 rounded-xl border border-orange-100">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              Sale Starts At <span className="text-gray-400 normal-case font-normal">(leave blank = immediate)</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={toDatetimeLocal(config.startsAt)}
+              onChange={e => setField('startsAt', e.target.value ? new Date(e.target.value).getTime() : null)}
+              className="w-full border border-orange-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-orange-400 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">
+              Sale Ends At <span className="text-gray-400 normal-case font-normal">(leave blank = no expiry)</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={toDatetimeLocal(config.endsAt)}
+              onChange={e => setField('endsAt', e.target.value ? new Date(e.target.value).getTime() : null)}
+              className="w-full border border-orange-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-orange-400 bg-white"
+            />
+          </div>
+          {config.startsAt && config.endsAt && (
+            <p className="md:col-span-2 text-xs text-orange-700 font-medium">
+              ⏱ Sale runs from{' '}
+              <strong>{new Date(config.startsAt).toLocaleString('en-IN')}</strong>
+              {' '}to{' '}
+              <strong>{new Date(config.endsAt).toLocaleString('en-IN')}</strong>
+            </p>
+          )}
+        </div>
       </div>
+
       <ProductPicker
         selectedIds={config.productIds || []}
         onChange={ids => setField('productIds', ids)}
@@ -416,7 +473,21 @@ export default function AdminHomeContent() {
   React.useEffect(() => { setDraft(content); }, [content.heroSlides, content.testimonials, content.flashSale, content.bestsellerIds, content.newArrivalIds]); // eslint-disable-line
 
   React.useEffect(() => {
-    api.get('/products?limit=200').then(r => { if (r.data?.length) setProducts(r.data); }).catch(() => {});
+    // Paginate through all products so the ProductPicker has real DB data
+    const loadAll = async () => {
+      try {
+        let page = 1, all = [];
+        while (true) {
+          const r = await api.get(`/products?limit=48&page=${page}`);
+          const batch = r.data?.products || [];
+          all = all.concat(batch);
+          if (batch.length < 48 || all.length >= 300) break;
+          page++;
+        }
+        if (all.length) setProducts(all);
+      } catch {}
+    };
+    loadAll();
   }, []);
 
   const save = async () => {

@@ -980,21 +980,20 @@ async function fetchCuratedOrFallback(ids, fallbackUrl, limit = 8) {
 }
 
 async function fetchFlashProducts(flashConfig) {
+  // Backend already applies startsAt / endsAt schedule and returns enabled:false when out of window
+  if (!flashConfig?.enabled) return [];
   const ids = flashConfig?.productIds || [];
-  if (!flashConfig?.enabled && ids.length === 0) return [];
   if (ids.length > 0) {
     try {
       const res = await api.get(`/products/by-ids?ids=${ids.slice(0, 20).join(',')}`);
       if (Array.isArray(res.data) && res.data.length > 0) return res.data;
     } catch {}
   }
-  // Flash sale is enabled but no products — show featured as fallback
-  if (flashConfig?.enabled) {
-    try {
-      const res = await api.get('/products/featured?limit=8');
-      if (Array.isArray(res.data)) return res.data;
-    } catch {}
-  }
+  // enabled=true but no products pinned — fall back to isFeatured products
+  try {
+    const res = await api.get('/products/featured?limit=8');
+    if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+  } catch {}
   return [];
 }
 
@@ -1031,11 +1030,8 @@ const Home = () => {
     })();
   }, [content.bestsellerIds, content.newArrivalIds, content.flashSale, content.loading]);
 
-  // Flash sale config: if enabled=false but we have products (from admin config), still show
-  const flashConfig = {
-    ...content.flashSale,
-    enabled: flashProducts.length > 0 ? true : (content.flashSale?.enabled || false),
-  };
+  // Pass backend config as-is; FlashSaleSection already guards on enabled + products.length
+  const flashConfig = content.flashSale || {};
 
   return (
     <Layout>
