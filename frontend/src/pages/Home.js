@@ -959,45 +959,96 @@ const InTheNewsSection = ({ data }) => {
 // ────────────────────────────────────────────────────────────────────────────
 // Home
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch products by curated IDs. Falls back to a direct endpoint when
+ * no IDs are configured in admin.
+ */
+async function fetchCuratedOrFallback(ids, fallbackUrl, limit = 8) {
+  if (Array.isArray(ids) && ids.length > 0) {
+    try {
+      const res = await api.get(`/products/by-ids?ids=${ids.slice(0, 20).join(',')}`);
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+  }
+  // Fallback: use a direct sorted endpoint
+  try {
+    const res = await api.get(`${fallbackUrl}?limit=${limit}`);
+    if (Array.isArray(res.data)) return res.data;
+  } catch {}
+  return [];
+}
+
+async function fetchFlashProducts(flashConfig) {
+  const ids = flashConfig?.productIds || [];
+  if (!flashConfig?.enabled && ids.length === 0) return [];
+  if (ids.length > 0) {
+    try {
+      const res = await api.get(`/products/by-ids?ids=${ids.slice(0, 20).join(',')}`);
+      if (Array.isArray(res.data) && res.data.length > 0) return res.data;
+    } catch {}
+  }
+  // Flash sale is enabled but no products — show featured as fallback
+  if (flashConfig?.enabled) {
+    try {
+      const res = await api.get('/products/featured?limit=8');
+      if (Array.isArray(res.data)) return res.data;
+    } catch {}
+  }
+  return [];
+}
+
 const Home = () => {
   const content = useSiteContent();
-  const [allProducts, setAllProducts] = useState([]);
+  const [bestsellers, setBestsellers] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [flashProducts, setFlashProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [blogPosts, setBlogPosts] = useState([]);
 
+  // Load categories and blog immediately (don't depend on content)
   useEffect(() => {
-    (async () => {
-      try {
-        const [pRes, cRes, bpRes] = await Promise.all([
-          api.get('/products?limit=100').catch(() => ({})),
-          api.get('/categories').catch(() => ({})),
-          api.get('/blog?limit=3').catch(() => ({})),
-        ]);
-        const products = pRes.data?.products || pRes.data || [];
-        if (Array.isArray(products)) setAllProducts(products);
-        if (Array.isArray(cRes.data)) setCategories(cRes.data.filter(c => !c.parent));
-        if (Array.isArray(bpRes.data)) setBlogPosts(bpRes.data);
-      } catch {}
-    })();
+    api.get('/categories').then(r => {
+      if (Array.isArray(r.data)) setCategories(r.data.filter(c => !c.parent));
+    }).catch(() => {});
+    api.get('/blog?limit=3').then(r => {
+      if (Array.isArray(r.data)) setBlogPosts(r.data);
+    }).catch(() => {});
   }, []);
 
-  const featured = getProductsByIds(content.bestsellerIds, allProducts);
-  const newArrivals = getProductsByIds(content.newArrivalIds, allProducts);
-  const flashProducts = getProductsByIds(content.flashSale?.productIds || [], allProducts);
+  // Load product sections — re-run whenever content IDs change
+  useEffect(() => {
+    if (content.loading) return; // wait for site content to resolve first
+    (async () => {
+      const [bs, na, fp] = await Promise.all([
+        fetchCuratedOrFallback(content.bestsellerIds, '/products/bestsellers', 8),
+        fetchCuratedOrFallback(content.newArrivalIds, '/products/new-arrivals', 8),
+        fetchFlashProducts(content.flashSale),
+      ]);
+      setBestsellers(bs);
+      setNewArrivals(na);
+      setFlashProducts(fp);
+    })();
+  }, [content.bestsellerIds, content.newArrivalIds, content.flashSale, content.loading]);
+
+  // Flash sale config: if enabled=false but we have products (from admin config), still show
+  const flashConfig = {
+    ...content.flashSale,
+    enabled: flashProducts.length > 0 ? true : (content.flashSale?.enabled || false),
+  };
 
   return (
     <Layout>
       <HeroBanner slides={content.heroSlides} trustBadges={content.trustBadges} />
       <FeaturesStrip items={content.featuresStrip} />
       <CategoryGrid categories={categories} />
-      <ProductSection title="Bestsellers" subtitle="Most Loved" products={featured} link="/products?featured=true" />
-      <FlashSaleSection products={flashProducts} config={content.flashSale} />
+      <ProductSection title="Bestsellers" subtitle="Most Loved" products={bestsellers} link="/products?featured=true" />
+      <FlashSaleSection products={flashProducts} config={flashConfig} />
       <BannerStrip banners={content.banners} />
       <SocialVideosSection videos={content.socialVideos} socials={content.nav?.footer?.socials || {}} />
       <PortalSection data={content.portalSection} statsBar={content.statsBar} />
       <WhyUsSection data={content.whyUs} />
       <Testimonials items={content.testimonials} />
-      {/* <InTheNewsSection data={content.inTheNews} /> */}
       <ProductSection title="New Arrivals" subtitle="Fresh Rituals" products={newArrivals} link="/products?sort=newest" />
       <BlogPreview posts={blogPosts} />
       {/* Retargeting personalization section */}

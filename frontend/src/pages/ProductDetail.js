@@ -74,7 +74,7 @@ const ProductDetail = () => {
       }
     };
     fetchProduct();
-  }, [slug, navigate]);
+  }, [slug, navigate, trackProductView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddToCart = () => {
     if (!product) return;

@@ -198,8 +198,41 @@ class TestimonialIn(BaseModel):
     order: Optional[int] = 0
 
 
+DEFAULT_TESTIMONIALS = [
+    {"name": "Priya Sharma", "city": "Delhi", "rating": 5,
+     "text": "Amazing quality products! My skin has transformed completely after using the Ayurvedic face pack. Will definitely order again.",
+     "avatar": "", "isActive": True, "order": 1},
+    {"name": "Rahul Mehta", "city": "Mumbai", "rating": 5,
+     "text": "The ashwagandha capsules have noticeably reduced my stress levels. Fast delivery and excellent packaging.",
+     "avatar": "", "isActive": True, "order": 2},
+    {"name": "Sunita Patel", "city": "Ahmedabad", "rating": 4,
+     "text": "Very happy with my purchase. The herbal hair oil is genuinely effective and smells wonderful. Highly recommend!",
+     "avatar": "", "isActive": True, "order": 3},
+    {"name": "Amit Verma", "city": "Bangalore", "rating": 5,
+     "text": "Authentic Ayurvedic products at fair prices. Customer support was very responsive when I had a query.",
+     "avatar": "", "isActive": True, "order": 4},
+    {"name": "Deepa Nair", "city": "Chennai", "rating": 5,
+     "text": "Been using their wellness range for 3 months now. Remarkable difference in my energy levels and immunity.",
+     "avatar": "", "isActive": True, "order": 5},
+    {"name": "Vikram Singh", "city": "Jaipur", "rating": 4,
+     "text": "Good products, prompt shipping. The chyawanprash is exactly like my grandmother used to make.",
+     "avatar": "", "isActive": True, "order": 6},
+]
+
+
+async def _seed_testimonials():
+    """Auto-seed default testimonials if the collection is empty."""
+    count = await testimonials_col.count_documents({})
+    if count == 0:
+        for t in DEFAULT_TESTIMONIALS:
+            t['id'] = f"t_{uuid.uuid4().hex[:8]}"
+            t['createdAt'] = now()
+        await testimonials_col.insert_many(DEFAULT_TESTIMONIALS)
+
+
 @router.get('/site/testimonials')
 async def list_testimonials_public():
+    await _seed_testimonials()
     rows = await testimonials_col.find({'isActive': True}).sort([('order', 1)]).to_list(50)
     return serialize_doc(rows)
 

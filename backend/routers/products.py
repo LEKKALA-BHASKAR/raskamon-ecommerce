@@ -111,6 +111,32 @@ async def search_products(
     return serialize_doc(products)
 
 
+@router.get('/by-ids')
+async def get_products_by_ids(ids: str = Query(..., description="Comma-separated product IDs")):
+    """Fetch specific products by a list of IDs — used by homepage curated sections."""
+    from bson import ObjectId
+    id_list = [i.strip() for i in ids.split(',') if i.strip()]
+    if not id_list:
+        return []
+    oids = []
+    for i in id_list:
+        try:
+            oids.append(ObjectId(i))
+        except Exception:
+            pass
+    if not oids:
+        return []
+    products = await products_col.find(
+        {'_id': {'$in': oids}, 'isActive': True},
+        {'description': 0}
+    ).to_list(len(oids))
+    serialized = serialize_doc(products)
+    # Preserve the admin-defined order
+    order_map = {str(p['id']): p for p in serialized}
+    ordered = [order_map[i] for i in id_list if i in order_map]
+    return ordered
+
+
 @router.get('/brands')
 async def get_brands():
     brands = await products_col.distinct('brand', {'isActive': True})
