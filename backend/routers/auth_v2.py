@@ -3,7 +3,7 @@ Enhanced Authentication Router
 Supports B2C, B2B, and Vendor registration with approval workflows
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Header
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime, timedelta
@@ -13,6 +13,14 @@ from database import users_col
 from utils.security import hash_password, verify_password, create_access_token, create_refresh_token, get_current_user
 from utils.audit import get_audit_logger
 from middleware.rbac import rate_limit
+
+# Import login tracking helpers from enhanced auth
+def _get_enhanced_helpers():
+    try:
+        from routers.auth_enhanced import _record_login, _create_device_session
+        return _record_login, _create_device_session
+    except ImportError:
+        return None, None
 
 router = APIRouter()
 
@@ -432,7 +440,7 @@ async def register_vendor(data: VendorRegistrationRequest, request: Request):
 
 @router.post('/login')
 @rate_limit(max_requests=5, window_seconds=60)
-async def login(credentials: LoginRequest, request: Request):
+async def login(credentials: LoginRequest, request: Request, user_agent: Optional[str] = None):
     """
     Universal login endpoint with strict role-based access control
     
@@ -545,6 +553,18 @@ async def login(credentials: LoginRequest, request: Request):
                     }
                 )
     
+    # Check if 2FA is enabled
+    if user.get('totp_enabled') and user.get('totp_secret'):
+        return {
+            "success": True,
+            "requires_2fa": True,
+            "message": "2FA verification required",
+            "data": {
+                "email": credentials.email,
+                "requires_2fa": True
+            }
+        }
+
     # Check if account is active
     if not user.get('is_active', True):
         raise HTTPException(
@@ -621,12 +641,23 @@ async def login(credentials: LoginRequest, request: Request):
         user_response['vendor_status'] = user.get('vendor_profile', {}).get('approval_status')
         user_response['store_name'] = user.get('vendor_profile', {}).get('store_name')
     
+    # Record login & device session
+    _record_login, _create_device_session = _get_enhanced_helpers()
+    ip = request.client.host if request else "unknown"
+    ua = user_agent or ""
+    session_token = None
+    if _record_login:
+        await _record_login(_uid, user['email'], 'email_password', ip, ua, True)
+    if _create_device_session:
+        session_token = await _create_device_session(_uid, ip, ua)
+
     return {
         "success": True,
         "message": "Login successful",
         "data": {
             "access_token": access_token,
             "refresh_token": refresh_token,
+            "session_token": session_token,
             "token_type": "Bearer",
             "user": user_response
         }

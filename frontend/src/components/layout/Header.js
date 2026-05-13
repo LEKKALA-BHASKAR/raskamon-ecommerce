@@ -12,6 +12,7 @@ import CartDrawer from '../cart/CartDrawer';
 import SearchModal from '../ui/SearchModal';
 import BrandLogo from '../brand/BrandLogo';
 import { useSiteNav } from '../../utils/useSiteNav';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const FALLBACK_ANNOUNCEMENTS = [
   '🌿 Free delivery on orders above ₹499 — Across India',
@@ -236,32 +237,45 @@ const Header = () => {
       >
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
 
+          <div className="flex items-stretch">
+
+            {/* Left side: Logo spanning both rows */}
+            <div className="hidden lg:flex items-center flex-shrink-0 pr-6">
+              <Link to="/" className="flex-shrink-0 flex items-center">
+                <BrandLogo size="xl" />
+              </Link>
+            </div>
+
+            {/* Right side: stacked rows */}
+            <div className="flex-1">
+
           {/* ── Primary row ── */}
           <div className="relative flex items-center justify-between h-[56px] lg:h-[60px]">
 
-            {/* Left side: Logo */}
-            <div className="flex items-center">
+            {/* Mobile Logo */}
+            <div className="flex lg:hidden items-center">
               <Link to="/" className="flex-shrink-0 flex items-center">
                 <BrandLogo size="lg" />
               </Link>
             </div>
 
-            {/* Search bar — absolutely centered on desktop */}
+            {/* Search bar — centered on desktop */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="absolute left-1/2 transform -translate-x-1/2 hidden lg:flex items-center gap-2 w-[300px] xl:w-[380px] rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-2 text-left shadow-sm hover:border-[var(--sattva-forest)] transition"
+              className="hidden lg:flex items-center gap-2 w-[240px] xl:w-[340px] rounded-full border border-[color:var(--sattva-border)] bg-[var(--sattva-surface)] px-2.5 py-1.5 text-left shadow-sm hover:border-[var(--sattva-forest)] transition"
             >
-              <Search size={15} className="text-gray-400 flex-shrink-0" />
-              <span className="text-sm text-gray-400 truncate">Search products…</span>
+              <Search size={14} className="text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-400 truncate">Search products…</span>
             </button>
 
             {/* Right side: Action buttons */}
-            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+            <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+              <ThemeToggle />
               <Link
                 to="/account"
-                className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+                className="flex items-center gap-1 rounded-full border border-[color:var(--sattva-border)] bg-[var(--sattva-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
               >
-                <Heart size={15} /> Wishlist
+                <Heart size={13} /> Wishlist
               </Link>
 
               <div
@@ -271,9 +285,9 @@ const Header = () => {
               >
                 <button
                   onClick={() => navigate(user ? '/account' : '/login')}
-                  className="flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+                  className="flex items-center gap-1 rounded-full border border-[color:var(--sattva-border)] bg-[var(--sattva-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
                 >
-                  <User size={15} /> Account
+                  <User size={13} /> Account
                 </button>
                 <AnimatePresence>
                   {openAccountMenu && (
@@ -365,9 +379,9 @@ const Header = () => {
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 onClick={() => setCartOpen(true)}
-                className="relative flex items-center gap-1.5 rounded-full border border-[color:var(--sattva-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
+                className="relative flex items-center gap-1 rounded-full border border-[color:var(--sattva-border)] bg-[var(--sattva-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--sattva-ink)] hover:bg-[var(--sattva-muted)] transition"
               >
-                <ShoppingBag size={15} /> Cart
+                <ShoppingBag size={13} /> Cart
                 {itemCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
@@ -382,6 +396,7 @@ const Header = () => {
 
             {/* Mobile icon buttons */}
             <div className="flex lg:hidden items-center gap-0.5 flex-shrink-0">
+              <ThemeToggle className="mr-0.5" />
               <motion.button
                 data-testid="header-search-button"
                 whileTap={{ scale: 0.92 }}
@@ -450,8 +465,8 @@ const Header = () => {
 
           {/* ── Desktop nav row ── */}
           <div className="hidden lg:flex items-center border-t border-[color:var(--sattva-border)]">
-            <nav className="flex items-center gap-0.5 whitespace-nowrap py-0.5">
-              <Link to="/" className="px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] rounded-lg transition-colors flex-shrink-0">
+            <nav className="flex items-center gap-0 whitespace-nowrap py-0.5">
+              <Link to="/" className="px-2 py-1.5 text-xs font-semibold text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] rounded-lg transition-colors flex-shrink-0">
                 Home
               </Link>
 
@@ -461,14 +476,14 @@ const Header = () => {
                 onMouseLeave={handleMenuLeave}
               >
                 <button
-                  className={`flex items-center gap-1 px-3 py-2 text-sm font-semibold transition-colors rounded-lg ${
+                  className={`flex items-center gap-1 px-2 py-1.5 text-xs font-semibold transition-colors rounded-lg ${
                     openMenu === 'Shop By Category'
                       ? 'text-[var(--sattva-forest)] bg-[var(--sattva-muted)]'
                       : 'text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)]'
                   }`}
                 >
                   Shop By Category
-                  <ChevronDown size={12} className={`transition-transform duration-200 ${openMenu === 'Shop By Category' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={10} className={`transition-transform duration-200 ${openMenu === 'Shop By Category' ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {openMenu === 'Shop By Category' && (
@@ -504,14 +519,14 @@ const Header = () => {
                 >
                   <Link
                     to={cat.href}
-                    className={`flex items-center gap-1 px-3 py-2 text-sm font-semibold transition-colors rounded-lg whitespace-nowrap ${
+                    className={`flex items-center gap-1 px-2 py-1.5 text-xs font-semibold transition-colors rounded-lg whitespace-nowrap ${
                       openMenu === cat.label
                         ? 'text-[var(--sattva-forest)] bg-[var(--sattva-muted)]'
                         : 'text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)]'
                     }`}
                   >
                     {cat.label}
-                    <ChevronDown size={12} className={`transition-transform duration-200 ${openMenu === cat.label ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={10} className={`transition-transform duration-200 ${openMenu === cat.label ? 'rotate-180' : ''}`} />
                   </Link>
                   <AnimatePresence>
                     {openMenu === cat.label && (
@@ -550,7 +565,7 @@ const Header = () => {
                 <Link
                   key={link.label}
                   to={link.href}
-                  className="px-3 py-2 text-sm font-semibold text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] rounded-lg transition-colors flex-shrink-0 whitespace-nowrap"
+                  className="px-2 py-1.5 text-xs font-semibold text-[var(--sattva-ink)] hover:text-[var(--sattva-forest)] hover:bg-[var(--sattva-muted)] rounded-lg transition-colors flex-shrink-0 whitespace-nowrap"
                 >
                   {link.label}
                 </Link>
@@ -558,6 +573,8 @@ const Header = () => {
             </nav>
           </div>
 
+            </div>{/* end right side stacked rows */}
+          </div>{/* end flex items-stretch */}
         </div>
 
         {/* Mobile Menu */}

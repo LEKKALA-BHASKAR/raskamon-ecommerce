@@ -23,6 +23,13 @@
         -->
         <title>Dr MediScie</title>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
+        <script>
+          (function(){
+            if(localStorage.getItem('theme')==='dark'){
+              document.documentElement.classList.add('dark');
+            }
+          })();
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>

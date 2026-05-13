@@ -10,7 +10,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # Import routers
 from routers import auth, users, products, categories, cart, orders, reviews, payments, upload, coupons, admin
-from routers import auth_v2, admin_users
+from routers import auth_v2, admin_users, auth_enhanced, admin_customer_360
 from routers import vendor_products, b2b_catalog, vendor_analytics, vendor_ledger
 from routers import site_content
 from routers import social_feed
@@ -79,6 +79,8 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 # They coexist with the legacy B2C auth (`/api/auth/*`) to enable incremental migration.
 app.include_router(auth_v2.router, prefix="/api/auth_v2", tags=["auth_v2"])
 app.include_router(admin_users.router, prefix="/api/admin_users", tags=["admin_users"])
+app.include_router(auth_enhanced.router, prefix="/api/auth/enhanced", tags=["auth_enhanced"])
+app.include_router(admin_customer_360.router, prefix="/api/admin/360", tags=["admin_customer_360"])
 
 # ==================== B2B + VENDOR MARKETPLACE ====================
 app.include_router(vendor_products.router, prefix="/api/vendor/products", tags=["vendor_products"])

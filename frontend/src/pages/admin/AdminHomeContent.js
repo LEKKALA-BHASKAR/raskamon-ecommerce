@@ -225,6 +225,37 @@ const HeroEditor = ({ slides = [], onChange }) => {
 
 // ---------- Product Picker (Bestsellers / New Arrivals / Flash Sale) ----------
 const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
+  // selectedCache: map of id → product fetched via /products/by-ids
+  // This ensures selected items are always visible even before the full catalog loads.
+  const [selectedCache, setSelectedCache] = React.useState({});
+  const [search, setSearch] = useState('');
+
+  // Whenever selectedIds changes, fetch any IDs not yet in cache
+  React.useEffect(() => {
+    const missing = selectedIds.filter(id => !selectedCache[id]);
+    if (missing.length === 0) return;
+    api.get(`/products/by-ids?ids=${missing.join(',')}`)
+      .then(r => {
+        if (!Array.isArray(r.data)) return;
+        setSelectedCache(prev => {
+          const next = { ...prev };
+          r.data.forEach(p => { next[p.id || p._id] = p; });
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [selectedIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also absorb any products already in the catalog into cache
+  React.useEffect(() => {
+    if (!products.length) return;
+    setSelectedCache(prev => {
+      const next = { ...prev };
+      products.forEach(p => { const id = p.id || p._id; if (id) next[id] = p; });
+      return next;
+    });
+  }, [products]);
+
   const toggle = (id) => {
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter(x => x !== id));
@@ -236,6 +267,7 @@ const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
       onChange([...selectedIds, id]);
     }
   };
+
   const move = (id, dir) => {
     const idx = selectedIds.indexOf(id);
     const next = [...selectedIds];
@@ -244,39 +276,60 @@ const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
     [next[idx], next[j]] = [next[j], next[idx]];
     onChange(next);
   };
-  const [search, setSearch] = useState('');
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  const filtered = products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-      {/* Selected */}
+      {/* Selected panel */}
       <div className="bg-white rounded-2xl border p-5">
         <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-          <Star size={14} className="text-[var(--sattva-gold)]" /> Selected ({selectedIds.length}{max ? `/${max}` : ''}) <span className="text-xs text-gray-400 font-normal">— displayed in this order</span>
+          <Star size={14} className="text-[var(--sattva-gold)]" />
+          Selected ({selectedIds.length}{max ? `/${max}` : ''})
+          <span className="text-xs text-gray-400 font-normal">— drag to reorder</span>
         </h4>
-        {selectedIds.length === 0 && <p className="text-sm text-gray-400 italic">No products selected. Click products from the right to add.</p>}
+        {selectedIds.length === 0 && (
+          <p className="text-sm text-gray-400 italic">No products selected. Click products on the right to add.</p>
+        )}
         <div className="space-y-2">
           {selectedIds.map((id, i) => {
-            const p = products.find(x => x.id === id || x._id === id);
-            if (!p) return null;
+            const p = selectedCache[id];
             return (
               <div key={id} className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 hover:bg-gray-100">
-                <span className="w-6 text-center text-xs font-bold text-gray-400">{i + 1}</span>
-                <img src={p.images?.[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{p.name}</p>
-                  <p className="text-xs text-gray-400">₹{p.discountPrice} · {p.category}</p>
-                </div>
-                <button onClick={() => move(id, -1)} disabled={i === 0} className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30"><ArrowUp size={12} /></button>
-                <button onClick={() => move(id, 1)} disabled={i === selectedIds.length - 1} className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30"><ArrowDown size={12} /></button>
-                <button onClick={() => toggle(id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"><X size={12} /></button>
+                <span className="w-6 text-center text-xs font-bold text-gray-400 flex-shrink-0">{i + 1}</span>
+                {p ? (
+                  <>
+                    <img
+                      src={p.images?.[0] || ''}
+                      alt={p.name}
+                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-gray-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400">
+                        ₹{(p.discountPrice || p.price || 0).toLocaleString('en-IN')} · {p.category}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-lg bg-gray-200 flex-shrink-0 animate-pulse" />
+                    <div className="flex-1 min-w-0">
+                      <div className="h-3 bg-gray-200 rounded w-3/4 mb-1 animate-pulse" />
+                      <div className="h-2.5 bg-gray-100 rounded w-1/2 animate-pulse" />
+                    </div>
+                  </>
+                )}
+                <button onClick={() => move(id, -1)} disabled={i === 0} className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 flex-shrink-0"><ArrowUp size={12} /></button>
+                <button onClick={() => move(id, 1)} disabled={i === selectedIds.length - 1} className="p-1.5 rounded-lg hover:bg-white disabled:opacity-30 flex-shrink-0"><ArrowDown size={12} /></button>
+                <button onClick={() => toggle(id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0"><X size={12} /></button>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Available */}
+      {/* Available products */}
       <div className="bg-white rounded-2xl border p-5">
         <h4 className="font-semibold text-sm mb-3">Available Products</h4>
         <input
@@ -286,6 +339,9 @@ const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
           onChange={e => setSearch(e.target.value)}
           className="w-full mb-3 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[var(--sattva-forest)]"
         />
+        {products.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-6 animate-pulse">Loading products…</p>
+        )}
         <div className="space-y-1 max-h-[480px] overflow-y-auto">
           {filtered.map(p => {
             const id = p.id || p._id;
@@ -294,14 +350,21 @@ const ProductPicker = ({ selectedIds = [], onChange, products, max }) => {
               <button
                 key={id}
                 onClick={() => toggle(id)}
-                className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${sel ? 'bg-[var(--sattva-forest)]/10 border border-[var(--sattva-forest)]/30' : 'hover:bg-gray-50'}`}
+                className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${
+                  sel ? 'bg-[var(--sattva-forest)]/10 border border-[var(--sattva-forest)]/30' : 'hover:bg-gray-50'
+                }`}
               >
-                <img src={p.images?.[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                <img src={p.images?.[0] || ''} alt={p.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-gray-100" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{p.name}</p>
-                  <p className="text-xs text-gray-400">₹{p.discountPrice} · {p.category}</p>
+                  <p className="text-xs text-gray-400">
+                    ₹{(p.discountPrice || p.price || 0).toLocaleString('en-IN')} · {p.category}
+                  </p>
                 </div>
-                {sel ? <span className="text-xs font-bold text-[var(--sattva-forest)]">✓ Added</span> : <Plus size={14} className="text-gray-400" />}
+                {sel
+                  ? <span className="text-xs font-bold text-[var(--sattva-forest)] flex-shrink-0">✓ Added</span>
+                  : <Plus size={14} className="text-gray-400 flex-shrink-0" />
+                }
               </button>
             );
           })}

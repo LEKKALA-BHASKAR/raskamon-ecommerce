@@ -65,12 +65,12 @@ const DetailModal = ({ txn, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="bg-[var(--sattva-surface)] rounded-2xl shadow-2xl border border-[color:var(--sattva-border)] w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <h3 className="font-heading text-lg font-bold text-gray-800">Transaction Detail</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+        <div className="flex items-center justify-between p-5 border-b border-[color:var(--sattva-border)]">
+          <h3 className="font-heading text-lg font-bold text-[var(--sattva-ink)]">Transaction Detail</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--sattva-muted)] transition">
             <X size={18} />
           </button>
         </div>
@@ -79,14 +79,14 @@ const DetailModal = ({ txn, onClose }) => {
           {rows.map(([label, value]) => (
             <div key={label} className="flex gap-3">
               <span className="text-xs font-semibold text-gray-400 w-36 flex-shrink-0 pt-0.5">{label}</span>
-              <span className="text-sm text-gray-800 break-all">{value}</span>
+              <span className="text-sm text-[var(--sattva-ink)] break-all">{value}</span>
             </div>
           ))}
 
           {txn.shippingAddress && (
             <div className="flex gap-3">
               <span className="text-xs font-semibold text-gray-400 w-36 flex-shrink-0 pt-0.5">Ship To</span>
-              <span className="text-sm text-gray-800">
+              <span className="text-sm text-[var(--sattva-ink)]">
                 {txn.shippingAddress.name}, {txn.shippingAddress.addressLine1}, {txn.shippingAddress.city}, {txn.shippingAddress.state} — {txn.shippingAddress.pincode}
               </span>
             </div>
@@ -95,7 +95,7 @@ const DetailModal = ({ txn, onClose }) => {
           {txn.gatewayResponse && Object.keys(txn.gatewayResponse).length > 0 && (
             <div>
               <p className="text-xs font-semibold text-gray-400 mb-1">Gateway Response</p>
-              <pre className="text-[10px] bg-gray-50 rounded-lg p-3 overflow-x-auto text-gray-600 whitespace-pre-wrap">
+              <pre className="text-[10px] bg-[var(--sattva-muted)] rounded-lg p-3 overflow-x-auto text-gray-500 whitespace-pre-wrap">
                 {JSON.stringify(txn.gatewayResponse, null, 2)}
               </pre>
             </div>
@@ -118,6 +118,8 @@ const AdminPayments = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [gatewayFilter, setGatewayFilter] = useState('');
   const [selected, setSelected] = useState(null);
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortDir, setSortDir]   = useState('desc');
 
   const LIMIT = 20;
 
@@ -160,38 +162,40 @@ const AdminPayments = () => {
     .reduce((s, t) => s + (t.amount || 0), 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-[var(--sattva-ink)]">Payment History</h1>
-          <p className="text-sm text-gray-500 mt-0.5">All gateway transactions — Razorpay, PhonePe, Airpay</p>
+          <h1 className="font-heading text-xl font-bold text-[var(--sattva-ink)]">Payment History</h1>
+          <p className="text-xs text-gray-400 mt-0.5">All gateway transactions — Razorpay, PhonePe, Airpay</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 btn-outlined px-4 py-2 text-sm">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+        <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-[color:var(--sattva-border)] rounded-lg hover:bg-[var(--sattva-muted)] transition-colors">
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Transactions', value: data.total,     cls: 'text-[var(--sattva-ink)]', icon: CreditCard },
-          { label: 'Successful',         value: successCount,   cls: 'text-green-600',            icon: CheckCircle2 },
-          { label: 'Failed',             value: failedCount,    cls: 'text-red-600',              icon: XCircle },
-          { label: 'Revenue (page)',      value: fmtAmt(successTotal), cls: 'text-[var(--sattva-forest)]', icon: CreditCard },
-        ].map(({ label, value, cls, icon: Icon }) => (
-          <div key={label} className="card-sattva p-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500 font-medium">{label}</p>
-              <Icon size={16} className={cls} />
+          { label: 'Total Transactions', value: data.total,     color: '#1A3C34', icon: CreditCard },
+          { label: 'Successful',         value: successCount,   color: '#10B981', icon: CheckCircle2 },
+          { label: 'Failed',             value: failedCount,    color: '#EF4444', icon: XCircle },
+          { label: 'Revenue (page)',      value: fmtAmt(successTotal), color: '#C8A96E', icon: CreditCard },
+        ].map(({ label, value, color, icon: Icon }) => (
+          <div key={label} className="bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
+                <Icon size={16} style={{ color }} />
+              </div>
             </div>
-            <p className={`text-xl font-bold ${cls}`}>{value}</p>
+            <p className="text-xl font-black tabular-nums text-[var(--sattva-ink)]">{value}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5 font-medium">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="card-sattva p-4">
+      <div className="bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl p-4">
         <div className="flex flex-wrap gap-3 items-end">
           {/* Search */}
           <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[200px]">
@@ -202,17 +206,17 @@ const AdminPayments = () => {
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Search by TXN ID, Order ID, User ID…"
-                className="w-full pl-8 pr-3 py-2 text-sm border border-[color:var(--sattva-border)] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--sattva-forest)]"
+                className="w-full pl-8 pr-3 py-2 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] text-[var(--sattva-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
               />
             </div>
-            <button type="submit" className="btn-primary px-4 py-2 text-sm">Search</button>
+            <button type="submit" className="px-4 py-2 text-sm font-semibold bg-[var(--sattva-forest)] text-white rounded-lg hover:opacity-90 transition-opacity">Search</button>
           </form>
 
           {/* Status filter */}
           <select
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="py-2 px-3 text-sm border border-[color:var(--sattva-border)] rounded-lg focus:outline-none"
+            className="py-2 px-3 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] text-[var(--sattva-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
@@ -225,7 +229,7 @@ const AdminPayments = () => {
           <select
             value={gatewayFilter}
             onChange={e => { setGatewayFilter(e.target.value); setPage(1); }}
-            className="py-2 px-3 text-sm border border-[color:var(--sattva-border)] rounded-lg focus:outline-none"
+            className="py-2 px-3 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] text-[var(--sattva-ink)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
           >
             <option value="">All Gateways</option>
             <option value="razorpay">Razorpay</option>
@@ -243,9 +247,13 @@ const AdminPayments = () => {
 
       {/* Table */}
       {error ? (
-        <div className="card-sattva p-8 text-center text-red-500">{error}</div>
+        <div className="bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl p-8 text-center">
+          <XCircle size={32} className="mx-auto text-red-400 mb-2" />
+          <p className="text-sm text-red-600 font-semibold">{error}</p>
+          <button onClick={load} className="mt-3 text-xs text-[var(--sattva-forest)] underline font-semibold">Retry</button>
+        </div>
       ) : (
-        <div className="card-sattva overflow-hidden">
+        <div className="bg-[var(--sattva-surface)] border border-[color:var(--sattva-border)] rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -261,7 +269,7 @@ const AdminPayments = () => {
                     <tr key={i}>
                       {[...Array(8)].map((__, j) => (
                         <td key={j} className="px-4 py-3">
-                          <div className="h-3 bg-gray-100 rounded animate-pulse w-20" />
+                          <div className="h-3 bg-[var(--sattva-muted)] rounded animate-pulse w-20" />
                         </td>
                       ))}
                     </tr>
@@ -308,7 +316,7 @@ const AdminPayments = () => {
                       <td className="px-4 py-3">
                         <button
                           onClick={() => setSelected(txn)}
-                          className="p-1.5 rounded-lg hover:bg-white transition text-gray-400 hover:text-[var(--sattva-forest)]"
+                          className="p-1.5 rounded-lg hover:bg-[var(--sattva-muted)] transition text-gray-400 hover:text-[var(--sattva-forest)]"
                           title="View details"
                         >
                           <Eye size={15} />

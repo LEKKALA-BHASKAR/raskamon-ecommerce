@@ -58,6 +58,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const res = await api.post('/auth_v2/login', { email, password });
+
+      // Handle 2FA required response — backend returns requires_2fa flag
+      if (res.data?.requires_2fa) {
+        return { requires_2fa: true, email };
+      }
+
       const { access_token, refresh_token, user: userData } = res.data.data;
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('refresh_token', refresh_token);
@@ -101,6 +107,45 @@ export const AuthProvider = ({ children }) => {
     return res.data?.data;
   };
 
+  // Google OAuth login
+  const loginWithGoogle = async (googleToken) => {
+    const res = await api.post('/auth/enhanced/google', { token: googleToken });
+    const { access_token, refresh_token, user: userData } = res.data.data;
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+    setUser(userData);
+    return userData;
+  };
+
+  // Mobile OTP — step 1: send OTP
+  const sendMobileOTP = async (phone) => {
+    const res = await api.post('/auth/enhanced/mobile/send-otp', { phone });
+    return res.data;
+  };
+
+  // Mobile OTP — step 2: verify and login
+  const verifyMobileOTP = async (phone, otp) => {
+    const res = await api.post('/auth/enhanced/mobile/verify-otp', { phone, otp });
+    const { access_token, refresh_token, user: userData } = res.data.data;
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+    setUser(userData);
+    return res.data.data;
+  };
+
+  // 2FA login (after initial login returns requires_2fa)
+  const loginWith2FA = async (email, password, totpCode) => {
+    const res = await api.post('/auth/enhanced/login-2fa', { email, password, totp_code: totpCode });
+    const { access_token, refresh_token, user: userData } = res.data.data;
+    localStorage.setItem('access_token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+    setUser(userData);
+    return userData;
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -122,6 +167,10 @@ export const AuthProvider = ({ children }) => {
         setUser,
         loading,
         login,
+        loginWithGoogle,
+        sendMobileOTP,
+        verifyMobileOTP,
+        loginWith2FA,
         register,
         registerB2B,
         registerVendor,

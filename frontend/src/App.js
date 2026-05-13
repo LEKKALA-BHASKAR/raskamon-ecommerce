@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/context/AuthContext';
@@ -7,6 +7,8 @@ import { TrackingProvider } from '@/context/TrackingContext';
 import ConsentBanner from '@/components/retargeting/ConsentBanner';
 import AbandonedCartPopup from '@/components/retargeting/AbandonedCartPopup';
 import AdminRetargeting from '@/pages/admin/AdminRetargeting';
+import SplashScreen from '@/components/ui/SplashScreen';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 
 // Pages
 import Home from '@/pages/Home';
@@ -18,7 +20,12 @@ import PaymentCallback from '@/pages/PaymentCallback';
 import SearchResults from '@/pages/SearchResults';
 import { Blog, BlogPost } from '@/pages/Blog';
 import { About, Contact, FAQ, Privacy, Terms, Shipping } from '@/pages/StaticPages';
-import AccountDashboard from '@/pages/account/AccountDashboard';
+import AccountLayout from '@/pages/account/AccountLayout';
+import AccountOrders from '@/pages/account/AccountOrders';
+import AccountWishlist from '@/pages/account/AccountWishlist';
+import AccountAddresses from '@/pages/account/AccountAddresses';
+import AccountProfile from '@/pages/account/AccountProfile';
+import AccountSecurity from '@/pages/account/AccountSecurity';
 
 // Auth Pages
 import Login from '@/pages/auth/Login';
@@ -67,10 +74,18 @@ import B2BDashboard from '@/pages/b2b/B2BDashboard';
 import B2BProductDetail from '@/pages/b2b/B2BProductDetail';
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <AuthProvider>
       <CartProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <TrackingProvider>
           <ConsentBanner />
           <AbandonedCartPopup />
@@ -98,8 +113,16 @@ function App() {
             <Route path="/register/vendor" element={<RegisterVendor />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            {/* Protected User Routes */}
-            <Route path="/account" element={<AccountDashboard />} />
+            {/* Protected User Routes — Account */}
+            <Route path="/account" element={<AccountLayout />}>
+              <Route index element={<Navigate to="/account/orders" replace />} />
+              <Route path="orders" element={<AccountOrders />} />
+              <Route path="wishlist" element={<AccountWishlist />} />
+              <Route path="addresses" element={<AccountAddresses />} />
+              <Route path="profile" element={<AccountProfile />} />
+              <Route path="security" element={<AccountSecurity />} />
+            </Route>
+            {/* Wallet has its own Layout wrapper so stays standalone */}
             <Route path="/account/wallet" element={<WalletDashboard />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/payment/callback" element={<PaymentCallback />} />
@@ -157,6 +180,7 @@ function App() {
           </TrackingProvider>
         </BrowserRouter>
       </CartProvider>
+      <SplashScreen visible={showSplash} />
     </AuthProvider>
   );
 }

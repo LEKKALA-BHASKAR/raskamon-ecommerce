@@ -91,6 +91,24 @@
   --border: 168 18% 20%;
   --input: 168 18% 20%;
   --ring: 39 44% 61%;
+
+  /* Brand tokens — dark */
+  --sattva-cream: #121f1b;
+  --sattva-ink: #F0EDE8;
+  --sattva-surface: #162923;
+  --sattva-border: #1f3d34;
+  --sattva-border-subtle: #1a3530;
+  --sattva-muted: #1a332c;
+  --sattva-muted-deep: #152923;
+  --sattva-forest-light: #3a7a6a;
+
+  /* Dark shadows */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-sm: 0 1px 0 rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.25);
+  --shadow-md: 0 2px 0 rgba(0,0,0,0.2), 0 18px 50px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 0 rgba(0,0,0,0.15), 0 32px 80px rgba(0,0,0,0.35);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.2), 0 16px 40px rgba(0,0,0,0.15);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.25), 0 24px 60px rgba(0,0,0,0.2);
 }
 
 @layer base {
@@ -210,7 +228,7 @@
   }
 
   .section-padding {
-    @apply py-16 sm:py-20 lg:py-28;
+    @apply py-8 sm:py-10 lg:py-12;
   }
 
   /* ═══ TYPOGRAPHY ═══ */
@@ -250,6 +268,9 @@
   .bg-sattva-paper {
     background-color: var(--sattva-cream);
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a3c34' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .dark .bg-sattva-paper {
+    background-image: none;
   }
 
   .bg-hero-pattern {
@@ -607,6 +628,9 @@
   background: rgba(250,248,245,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+.dark .header-blur {
+  background: rgba(18,31,27,0.92);
 }
 
 /* ═══ NEWSLETTER INPUT GLOW ═══ */

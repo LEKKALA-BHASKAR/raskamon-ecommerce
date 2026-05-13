@@ -10,6 +10,9 @@ const sizeClasses = {
   lg: {
     image: 'h-20 w-auto',
   },
+  xl: {
+    image: 'h-24 w-auto',
+  },
 };
 
 const BrandLogo = ({
@@ -23,7 +26,7 @@ const BrandLogo = ({
   return (
     <div className={`flex ${alignment} ${className}`}>
       <img
-        src="/mediscie-logo.png"
+        src="/LOGO-1.jpeg"
         alt="Dr MediScie"
         className={`${styles.image} object-contain`}
       />

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { X, Plus, Upload } from 'lucide-react';
+import { X, Plus, Upload, GripVertical, Image as ImageIcon } from 'lucide-react';
 import api from '../../utils/api';
 import { toast } from 'sonner';
 
@@ -44,37 +44,64 @@ const AdminProductForm = () => {
 
   const removeImage = (i) => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragIdx, setDragIdx] = useState(null);
+
+  const uploadFiles = useCallback(async (files) => {
+    const MAX_BYTES = 5 * 1024 * 1024;
     const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
-    if (!ALLOWED.includes(file.type)) {
-      toast.error('Unsupported file type. Use JPG/PNG/WEBP/AVIF/GIF');
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error('File too large. Max 5MB');
-      return;
-    }
+    const validFiles = Array.from(files).filter(f => {
+      if (!ALLOWED.includes(f.type)) { toast.error(`${f.name}: unsupported type`); return false; }
+      if (f.size > MAX_BYTES) { toast.error(`${f.name}: too large (max 5MB)`); return false; }
+      return true;
+    });
+    if (!validFiles.length) return;
+    setUploading(true);
     try {
       const sigRes = await api.get('/upload/signature');
       const { signature, timestamp, cloud_name, api_key, folder } = sigRes.data;
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('signature', signature);
-      fd.append('timestamp', timestamp);
-      fd.append('api_key', api_key);
-      fd.append('folder', folder);
-      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`, { method: 'POST', body: fd });
-      const data = await uploadRes.json();
-      if (data.secure_url) {
-        setForm(f => ({ ...f, images: [...(f.images || []), data.secure_url] }));
-        toast.success('Image uploaded!');
+      const uploads = validFiles.map(async (file) => {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('signature', signature);
+        fd.append('timestamp', timestamp);
+        fd.append('api_key', api_key);
+        fd.append('folder', folder);
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`, { method: 'POST', body: fd });
+        const data = await res.json();
+        return data.secure_url || null;
+      });
+      const urls = (await Promise.all(uploads)).filter(Boolean);
+      if (urls.length) {
+        setForm(f => ({ ...f, images: [...(f.images || []), ...urls] }));
+        toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} uploaded!`);
       }
     } catch {
       toast.error('Upload failed');
-    }
+    } finally { setUploading(false); }
+  }, []);
+
+  const handleUpload = (e) => {
+    const files = e.target.files;
+    if (files?.length) uploadFiles(files);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files?.length) uploadFiles(files);
+  };
+
+  const moveImage = (from, to) => {
+    setForm(f => {
+      const imgs = [...(f.images || [])];
+      const [moved] = imgs.splice(from, 1);
+      imgs.splice(to, 0, moved);
+      return { ...f, images: imgs };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -188,30 +215,82 @@ const AdminProductForm = () => {
 
           {/* Images */}
           <div className="card-sattva p-6">
-            <h3 className="font-semibold text-sm mb-4">Product Images</h3>
-            <div className="flex gap-2 mb-4">
-              <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Enter image URL"
-                className="flex-1 px-3 py-2.5 text-sm border border-[color:var(--sattva-border)] rounded-xl bg-[var(--sattva-surface)] focus:outline-none"
-              />
-              <button type="button" onClick={addImage} className="px-4 py-2.5 bg-[var(--sattva-muted)] text-[var(--sattva-forest)] text-sm font-medium rounded-xl hover:bg-[var(--sattva-border)] transition-colors">
-                Add URL
-              </button>
-              <label className="px-4 py-2.5 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-sm font-medium rounded-xl cursor-pointer hover:bg-[#152f28] transition-colors flex items-center gap-2">
-                <Upload size={14} /> Upload
-                <input type="file" accept="image/avif,image/*" onChange={handleUpload} className="hidden" />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm">Product Images</h3>
+              <span className="text-xs text-gray-400">{form.images?.length || 0} image{(form.images?.length || 0) !== 1 ? 's' : ''}</span>
+            </div>
+
+            {/* Drag & drop zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-xl p-6 mb-4 text-center transition-colors ${
+                dragOver ? 'border-[var(--sattva-gold)] bg-[var(--sattva-gold)]/5' : 'border-[var(--sattva-border)] hover:border-[var(--sattva-forest)]'
+              }`}
+            >
+              <ImageIcon size={32} className="mx-auto mb-2 text-gray-300" />
+              <p className="text-sm text-gray-500 mb-1">
+                {uploading ? 'Uploading...' : 'Drag & drop images here, or'}
+              </p>
+              <label className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--sattva-forest)] text-[var(--sattva-cream)] text-sm font-medium rounded-lg cursor-pointer hover:bg-[#152f28] transition-colors">
+                <Upload size={14} /> Browse Files
+                <input type="file" accept="image/avif,image/*" multiple onChange={handleUpload} className="hidden" />
               </label>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {form.images?.map((img, i) => (
-                <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden bg-[var(--sattva-muted)]">
-                  <img src={img} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeImage(i)}
-                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
-                    <X size={10} />
-                  </button>
+              <p className="text-[10px] text-gray-400 mt-2">JPG, PNG, WEBP, AVIF, GIF — Max 5MB each — Select multiple files</p>
+              {uploading && (
+                <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-[var(--sattva-forest)] border-t-transparent rounded-full animate-spin" />
                 </div>
-              ))}
+              )}
             </div>
+
+            {/* URL input */}
+            <div className="flex gap-2 mb-4">
+              <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Or paste image URL..."
+                className="flex-1 px-3 py-2 text-sm border border-[color:var(--sattva-border)] rounded-lg bg-[var(--sattva-surface)] focus:outline-none focus:ring-2 focus:ring-[var(--sattva-gold)]"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImage(); } }}
+              />
+              <button type="button" onClick={addImage} className="px-4 py-2 bg-[var(--sattva-muted)] text-[var(--sattva-forest)] text-sm font-medium rounded-lg hover:bg-[var(--sattva-border)] transition-colors">
+                <Plus size={14} />
+              </button>
+            </div>
+
+            {/* Image grid with reordering */}
+            {form.images?.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {form.images.map((img, i) => (
+                  <div
+                    key={`${img}-${i}`}
+                    draggable
+                    onDragStart={() => setDragIdx(i)}
+                    onDragOver={(e) => { e.preventDefault(); }}
+                    onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (dragIdx !== null && dragIdx !== i) moveImage(dragIdx, i); setDragIdx(null); }}
+                    onDragEnd={() => setDragIdx(null)}
+                    className={`group relative aspect-square rounded-xl overflow-hidden bg-[var(--sattva-muted)] border-2 transition-all cursor-grab active:cursor-grabbing ${
+                      dragIdx === i ? 'border-[var(--sattva-gold)] opacity-50 scale-95' : 'border-transparent hover:border-[var(--sattva-forest)]'
+                    }`}
+                  >
+                    <img src={img} alt={`Product ${i + 1}`} className="w-full h-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[9px] font-bold uppercase bg-[var(--sattva-gold)] text-[var(--sattva-forest-deep)] rounded">
+                        Main
+                      </span>
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                      <GripVertical size={14} className="text-white" />
+                    </div>
+                    <button type="button" onClick={() => removeImage(i)}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600">
+                      <X size={10} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {form.images?.length > 1 && (
+              <p className="text-[10px] text-gray-400 mt-2">Drag images to reorder. First image is the main product image.</p>
+            )}
           </div>
 
           <div className="flex gap-3">

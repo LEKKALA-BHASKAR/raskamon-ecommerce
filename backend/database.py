@@ -54,6 +54,11 @@ pixel_config_col = db['pixel_config']              # FB/Google pixel keys
 recommendation_cache_col = db['recommendation_cache']
 consent_col = db['tracking_consent']               # GDPR consent records
 
+# ── Authentication & Security ──────────────────────────────────────────
+login_history_col = db['login_history']              # per-user login events
+device_sessions_col = db['device_sessions']          # active device/sessions
+otp_requests_col = db['otp_requests']                # mobile/email OTP tokens
+
 
 async def create_indexes():
     """Create MongoDB indexes for performance"""
@@ -128,3 +133,12 @@ async def create_indexes():
     await recommendation_cache_col.create_index('updatedAt')
     await consent_col.create_index('userId', unique=True)
     await consent_col.create_index('sessionId')
+    # Auth & security indexes
+    await login_history_col.create_index('user_id')
+    await login_history_col.create_index('created_at')
+    await login_history_col.create_index([('user_id', 1), ('created_at', -1)])
+    await device_sessions_col.create_index('user_id')
+    await device_sessions_col.create_index('session_token', unique=True, sparse=True)
+    await device_sessions_col.create_index('expires_at')
+    await otp_requests_col.create_index('identifier')
+    await otp_requests_col.create_index('expires_at')

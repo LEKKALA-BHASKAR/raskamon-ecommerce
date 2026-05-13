@@ -17,63 +17,189 @@ router = APIRouter()
 async def get_dashboard_stats(admin=Depends(require_staff)):
     from datetime import timedelta
     today_start = now().replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    this_month_start = today_start.replace(day=1)
+    last_month_start = (this_month_start - timedelta(days=1)).replace(day=1)
+    last_7_start = today_start - timedelta(days=7)
+    prev_7_start = today_start - timedelta(days=14)
 
+    # ── Core counts ──
     total_revenue_pipeline = [
         {'$match': {'paymentStatus': 'paid'}},
-        {'$group': {'_id': None, 'total': {'$sum': '$totalAmount'}}}
+        {'$group': {'_id': None, 'total': {'$sum': '$totalAmount'}, 'count': {'$sum': 1}}}
     ]
     revenue_result = await orders_col.aggregate(total_revenue_pipeline).to_list(1)
     total_revenue = revenue_result[0]['total'] if revenue_result else 0
+    total_orders = revenue_result[0]['count'] if revenue_result else 0
 
     orders_today = await orders_col.count_documents({'createdAt': {'$gte': today_start}})
+    orders_yesterday = await orders_col.count_documents({'createdAt': {'$gte': yesterday_start, '$lt': today_start}})
     pending_orders = await orders_col.count_documents({'orderStatus': {'$in': ['placed', 'confirmed']}})
     total_customers = await users_col.count_documents({'role': 'customer'})
+    new_customers_month = await users_col.count_documents({'role': 'customer', 'createdAt': {'$gte': this_month_start}})
     total_products = await products_col.count_documents({'isActive': True})
     low_stock = await products_col.count_documents({'stock': {'$lte': 10, '$gt': 0}, 'isActive': True})
     out_of_stock = await products_col.count_documents({'stock': 0, 'isActive': True})
 
-    # Top selling products
+    # ── Today vs Yesterday revenue ──
+    today_rev_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': today_start}}},
+        {'$group': {'_id': None, 'revenue': {'$sum': '$totalAmount'}, 'orders': {'$sum': 1}, 'avgOrder': {'$avg': '$totalAmount'}}}
+    ]
+    today_rev = await orders_col.aggregate(today_rev_pipeline).to_list(1)
+    today_revenue = today_rev[0]['revenue'] if today_rev else 0
+    today_order_count = today_rev[0]['orders'] if today_rev else 0
+    today_aov = today_rev[0]['avgOrder'] if today_rev else 0
+
+    yesterday_rev_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': yesterday_start, '$lt': today_start}}},
+        {'$group': {'_id': None, 'revenue': {'$sum': '$totalAmount'}, 'orders': {'$sum': 1}, 'avgOrder': {'$avg': '$totalAmount'}}}
+    ]
+    yesterday_rev = await orders_col.aggregate(yesterday_rev_pipeline).to_list(1)
+    yesterday_revenue = yesterday_rev[0]['revenue'] if yesterday_rev else 0
+    yesterday_order_count = yesterday_rev[0]['orders'] if yesterday_rev else 0
+    yesterday_aov = yesterday_rev[0]['avgOrder'] if yesterday_rev else 0
+
+    # ── This month vs last month ──
+    this_month_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': this_month_start}}},
+        {'$group': {'_id': None, 'revenue': {'$sum': '$totalAmount'}, 'orders': {'$sum': 1}, 'avgOrder': {'$avg': '$totalAmount'}}}
+    ]
+    this_month_data = await orders_col.aggregate(this_month_pipeline).to_list(1)
+    this_month_revenue = this_month_data[0]['revenue'] if this_month_data else 0
+    this_month_orders = this_month_data[0]['orders'] if this_month_data else 0
+    this_month_aov = this_month_data[0]['avgOrder'] if this_month_data else 0
+
+    last_month_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': last_month_start, '$lt': this_month_start}}},
+        {'$group': {'_id': None, 'revenue': {'$sum': '$totalAmount'}, 'orders': {'$sum': 1}, 'avgOrder': {'$avg': '$totalAmount'}}}
+    ]
+    last_month_data = await orders_col.aggregate(last_month_pipeline).to_list(1)
+    last_month_revenue = last_month_data[0]['revenue'] if last_month_data else 0
+    last_month_orders = last_month_data[0]['orders'] if last_month_data else 0
+
+    # ── Payment method breakdown ──
+    payment_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': last_7_start}}},
+        {'$group': {'_id': '$paymentMethod', 'count': {'$sum': 1}, 'revenue': {'$sum': '$totalAmount'}}},
+        {'$sort': {'revenue': -1}}
+    ]
+    payment_methods = await orders_col.aggregate(payment_pipeline).to_list(10)
+
+    # ── Cancellation / refund rate ──
+    cancelled_count = await orders_col.count_documents({'orderStatus': 'cancelled', 'createdAt': {'$gte': last_7_start}})
+    total_7d = await orders_col.count_documents({'createdAt': {'$gte': last_7_start}})
+    cancel_rate = round((cancelled_count / total_7d * 100), 1) if total_7d else 0
+
+    # ── Sales by hour today ──
+    hourly_pipeline = [
+        {'$match': {'createdAt': {'$gte': today_start}}},
+        {'$group': {'_id': {'$hour': '$createdAt'}, 'orders': {'$sum': 1}, 'revenue': {'$sum': '$totalAmount'}}},
+        {'$sort': {'_id': 1}}
+    ]
+    hourly_sales = await orders_col.aggregate(hourly_pipeline).to_list(24)
+
+    # ── Top selling products ──
     top_pipeline = [
         {'$match': {'orderStatus': {'$nin': ['cancelled']}}},
         {'$unwind': '$items'},
         {'$group': {'_id': '$items.productId', 'name': {'$first': '$items.name'}, 'sales': {'$sum': '$items.quantity'}, 'revenue': {'$sum': {'$multiply': ['$items.price', '$items.quantity']}}}},
-        {'$sort': {'sales': -1}},
+        {'$sort': {'revenue': -1}},
         {'$limit': 5}
     ]
     top_products = await orders_col.aggregate(top_pipeline).to_list(5)
 
-    # Recent orders
+    # ── Top customers by spend ──
+    top_customers_pipeline = [
+        {'$match': {'paymentStatus': 'paid'}},
+        {'$group': {'_id': '$userId', 'name': {'$first': '$userName'}, 'email': {'$first': '$userEmail'}, 'orders': {'$sum': 1}, 'totalSpent': {'$sum': '$totalAmount'}}},
+        {'$sort': {'totalSpent': -1}},
+        {'$limit': 5}
+    ]
+    top_customers = await orders_col.aggregate(top_customers_pipeline).to_list(5)
+
+    # ── Recent orders ──
     recent_orders = await orders_col.find(
         {},
-        {'_id': 1, 'userName': 1, 'totalAmount': 1, 'orderStatus': 1, 'createdAt': 1}
-    ).sort([('createdAt', -1)]).limit(5).to_list(5)
+        {'_id': 1, 'invoiceId': 1, 'userName': 1, 'userEmail': 1, 'totalAmount': 1, 'orderStatus': 1, 'paymentMethod': 1, 'paymentStatus': 1, 'createdAt': 1, 'items': 1}
+    ).sort([('createdAt', -1)]).limit(8).to_list(8)
 
-    # Orders by status
+    # ── Orders by status ──
     status_pipeline = [
         {'$group': {'_id': '$orderStatus', 'count': {'$sum': 1}}}
     ]
     orders_by_status = await orders_col.aggregate(status_pipeline).to_list(10)
 
-    # Revenue last 7 days
+    # ── Revenue last 7 days ──
     revenue_pipeline = [
-        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': today_start - timedelta(days=7)}}},
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': last_7_start}}},
         {'$group': {'_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$createdAt'}}, 'revenue': {'$sum': '$totalAmount'}, 'orders': {'$sum': 1}}},
         {'$sort': {'_id': 1}}
     ]
     revenue_trend = await orders_col.aggregate(revenue_pipeline).to_list(7)
 
+    # ── Monthly revenue (6 months) ──
+    six_months_ago = today_start - timedelta(days=180)
+    monthly_pipeline = [
+        {'$match': {'paymentStatus': 'paid', 'createdAt': {'$gte': six_months_ago}}},
+        {'$group': {
+            '_id': {'$dateToString': {'format': '%Y-%m', 'date': '$createdAt'}},
+            'revenue': {'$sum': '$totalAmount'},
+            'orders': {'$sum': 1}
+        }},
+        {'$sort': {'_id': 1}}
+    ]
+    monthly_revenue = await orders_col.aggregate(monthly_pipeline).to_list(6)
+
+    # ── Category revenue ──
+    cat_pipeline = [
+        {'$match': {'orderStatus': {'$nin': ['cancelled']}}},
+        {'$unwind': '$items'},
+        {'$group': {'_id': '$items.category', 'value': {'$sum': {'$multiply': ['$items.price', '$items.quantity']}}}},
+        {'$sort': {'value': -1}},
+        {'$limit': 6}
+    ]
+    category_revenue = await orders_col.aggregate(cat_pipeline).to_list(6)
+    category_revenue = [{'name': c['_id'] or 'Other', 'value': c['value']} for c in category_revenue]
+
+    # ── Vendor stats ──
+    total_vendors = await users_col.count_documents({'role': 'vendor'})
+    pending_vendor_approvals = await users_col.count_documents({'role': 'vendor', 'vendorStatus': 'pending'})
+
     return {
         'totalRevenue': total_revenue,
+        'totalOrders': total_orders,
         'ordersToday': orders_today,
+        'ordersYesterday': orders_yesterday,
         'pendingOrders': pending_orders,
         'totalCustomers': total_customers,
+        'newCustomers': new_customers_month,
         'totalProducts': total_products,
         'lowStock': low_stock,
         'outOfStock': out_of_stock,
+        'totalVendors': total_vendors,
+        'pendingApprovals': pending_vendor_approvals,
+        'todayRevenue': today_revenue,
+        'todayOrders': today_order_count,
+        'todayAOV': round(today_aov),
+        'yesterdayRevenue': yesterday_revenue,
+        'yesterdayOrders': yesterday_order_count,
+        'yesterdayAOV': round(yesterday_aov),
+        'thisMonthRevenue': this_month_revenue,
+        'thisMonthOrders': this_month_orders,
+        'thisMonthAOV': round(this_month_aov),
+        'lastMonthRevenue': last_month_revenue,
+        'lastMonthOrders': last_month_orders,
+        'paymentMethods': payment_methods,
+        'cancelRate': cancel_rate,
+        'hourlySales': hourly_sales,
         'topProducts': top_products,
+        'topCustomers': top_customers,
         'recentOrders': serialize_doc(recent_orders),
         'ordersByStatus': orders_by_status,
-        'revenueTrend': revenue_trend
+        'revenueTrend': revenue_trend,
+        'monthlyRevenue': monthly_revenue,
+        'categoryRevenue': category_revenue,
     }
 
 

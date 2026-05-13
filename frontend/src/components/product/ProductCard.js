@@ -111,7 +111,7 @@ const ProductCard = ({ product }) => {
           <button
             data-testid="product-card-wishlist-button"
             onClick={handleWishlist}
-            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all duration-200"
+            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-[var(--sattva-surface)]/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all duration-200"
             style={{ opacity: hovering ? 1 : 0, transform: hovering ? 'scale(1)' : 'scale(0.8)' }}
             aria-label="Wishlist"
           >
@@ -157,7 +157,7 @@ const ProductCard = ({ product }) => {
           {/* OOS overlay */}
           {product.stock === 0 && (
             <div className="absolute inset-0 bg-[var(--sattva-cream)]/55 flex items-center justify-center">
-              <span className="bg-white text-gray-500 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border border-gray-200">
+              <span className="bg-[var(--sattva-surface)] text-[var(--sattva-ink)]/50 text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full border border-[var(--sattva-border)]">
                 Out of Stock
               </span>
             </div>
@@ -186,7 +186,7 @@ const ProductCard = ({ product }) => {
                 ₹{price?.toLocaleString('en-IN')}
               </span>
               {originalPrice > price && (
-                <span className="price-tag text-xs text-gray-400 line-through">
+                <span className="price-tag text-xs text-[var(--sattva-ink)]/40 line-through">
                   ₹{originalPrice?.toLocaleString('en-IN')}
                 </span>
               )}
